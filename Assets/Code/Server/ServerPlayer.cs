@@ -30,17 +30,8 @@ namespace Code.Server
                 return;
             }
 
-            float timeDiff = command.Time - LastProcessedCommandTime;
-            Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff}");
-            
-            if (timeDiff != command.Delta)
-            {
-                Debug.LogWarning($"Player {Id} received command {command.Id} with time diff {timeDiff} and delta {command.Delta}");
-            }
-            else
-            {
-                Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff} == delta {command.Delta}");
-            }
+            // float timeDiff = command.Time - LastProcessedCommandTime;
+            // Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff}");
             
             
             // Update last processed command ID and apply the input

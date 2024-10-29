@@ -100,6 +100,9 @@ namespace Code.Client
 
         public override void Update(float delta)
         {
+            LastPosition = _position;
+            LastRotation = _rotation;
+
             // _updateCount++;
             // if (_updateCount == 3)
             // {
@@ -113,9 +116,6 @@ namespace Code.Client
         
         public void UpdateLocal(float delta)
         {
-            LastPosition = _position;
-            LastRotation = _rotation;
-            
             _nextCommand.Id = (ushort)((_nextCommand.Id + 1) % NetworkGeneral.MaxGameSequence);
             _nextCommand.ServerTick = _lastServerState.Tick;
             _nextCommand.Delta = delta;

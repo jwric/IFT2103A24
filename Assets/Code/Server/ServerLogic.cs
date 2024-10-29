@@ -67,7 +67,7 @@ namespace Code.Server
             await Task.Delay(SimulatedLagMs); // Delay to simulate lag
         }
 
-        private async void OnLogicUpdate()
+        private void OnLogicUpdate()
         {
             // Debug.Log("Server tick: " + _serverTick);
             _serverTick = (ushort)((_serverTick + 1) % NetworkGeneral.MaxGameSequence);
@@ -92,7 +92,7 @@ namespace Code.Server
                         _serverState.LastProcessedCommand = p.LastProcessedCommandId;
                         _serverState.PlayerStatesCount = pCount;
                         _serverState.StartState = s * statesMax;
-                        await SimulateLag();
+                        // await SimulateLag();
                         p.AssociatedPeer.Send(WriteSerializable(PacketType.ServerState, _serverState), DeliveryMethod.Unreliable);
                     }
                 }
