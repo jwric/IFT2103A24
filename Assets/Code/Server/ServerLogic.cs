@@ -170,6 +170,12 @@ namespace Code.Server
                 return;
             _cachedCommand.Deserialize(reader);
             var player = (ServerPlayer) peer.Tag;
+
+            if (NetworkGeneral.SeqDiff(_serverTick, _cachedCommand.ServerTick) < 0)
+            {
+                Debug.LogWarning($"Player {player.Id} sent a command from the future: {_cachedCommand.ServerTick} vs actual {_serverTick}");
+                return;
+            }
             
             bool antilagApplied = _playerManager.EnableAntilag(player);
             player.ApplyInput(_cachedCommand, _cachedCommand.Delta);

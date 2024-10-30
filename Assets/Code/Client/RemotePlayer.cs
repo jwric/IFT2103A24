@@ -98,12 +98,15 @@ namespace Code.Client
             // Prevent excessive buffering by dynamically adjusting the buffer
             if (_bufferTime > TargetBufferTime * 1.5f)
             {
-                Debug.LogWarning("[C] Remote: Lag detected, clearing oldest buffer entries");
+                int i = 0;
                 while (_buffer.Count > 2 && _bufferTime > TargetBufferTime)
                 {
+                    i++;
                     _buffer.RemoveFromStart(1);
                     _bufferTime -= timeDiff;
                 }
+                if (i > 0)
+                    Debug.LogWarning($"[C] Remote: Lag detected, cleared {i} buffer entries"); 
             }
             
             _buffer.Add(state);

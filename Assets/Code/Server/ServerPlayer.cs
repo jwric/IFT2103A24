@@ -11,7 +11,15 @@ namespace Code.Server
         public PlayerState NetworkState;
         public ushort LastProcessedCommandId { get; private set; }
         public float LastProcessedCommandTime { get; private set; }
+        public ushort LastProcessedCommandTick { get; private set; }
+        private ushort _lastTickDiff;
         
+        private float _tickTime = 0f;
+        private bool _isFirstStateReceived = false;
+        private int _numExceeding;
+        
+        public int TickUpdateCount { get; private set; }
+
         public ServerPlayer(ServerPlayerManager playerManager, string name, NetPeer peer) : base(playerManager, name, (byte)peer.Id)
         {
             _playerManager = playerManager;
@@ -30,6 +38,46 @@ namespace Code.Server
                 return;
             }
 
+            if (!_isFirstStateReceived)
+            {
+                _isFirstStateReceived = true;
+                _lastTickDiff = 1;
+            }
+            else
+            {
+                int tickDiff = NetworkGeneral.SeqDiff(command.ServerTick, LastProcessedCommandTick);
+                // Old tick, ignore
+                if (tickDiff < 0)
+                {
+                    // Debug.LogWarning($"Player {Id} received a command from the past: {command.ServerTick} (last processed {LastProcessedCommandTick})");
+                    return;
+                }
+                // New tick, reset tick time
+                if (tickDiff > 0)
+                {
+                    Debug.Log($"Num exceeding: {_numExceeding} (total {TickUpdateCount} updates)");
+                    // New tick, reset tick time
+                    _tickTime = 0f;
+                    TickUpdateCount = 0;
+                    _lastTickDiff = (ushort)tickDiff;
+                    _numExceeding = 0;
+                }
+            }
+
+            _tickTime += delta;
+            TickUpdateCount++;
+            
+            const float MaxAllowedTime = 1/30f;
+            float margin = Mathf.Min(delta, MaxAllowedTime) * 3;
+            float maxTime = LogicTimerServer.FixedDelta * _lastTickDiff + margin;
+            // Check if the tick time exceeds the fixed delta
+            if (_tickTime > maxTime)
+            {
+                Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
+                _numExceeding++;
+                return;
+            }
+            
             // float timeDiff = command.Time - LastProcessedCommandTime;
             // Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff}");
             
@@ -38,6 +86,8 @@ namespace Code.Server
             LastProcessedCommandId = command.Id;
             // register the time of the last processed command
             LastProcessedCommandTime = command.Time;
+            // Update the tick of the last processed command
+            LastProcessedCommandTick = command.ServerTick;
             base.ApplyInput(command, delta);
         }
 
