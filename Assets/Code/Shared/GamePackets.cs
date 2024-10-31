@@ -126,6 +126,7 @@ namespace Code.Shared
     {
         public byte Id;
         public Vector2 Position;
+        public Vector2 Velocity;
         public float Rotation;
         public ushort Tick;
         public float Time;
@@ -136,6 +137,7 @@ namespace Code.Shared
         {
             writer.Put(Id);
             writer.Put(Position);
+            writer.Put(Velocity);
             writer.Put(Rotation);
             writer.Put(Tick);
             writer.Put(Time);
@@ -145,6 +147,7 @@ namespace Code.Shared
         {
             Id = reader.GetByte();
             Position = reader.GetVector2();
+            Velocity = reader.GetVector2();
             Rotation = reader.GetFloat();
             Tick = reader.GetUShort();
             Time = reader.GetFloat();

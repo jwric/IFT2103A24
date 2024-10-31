@@ -93,11 +93,13 @@ namespace Code.Client
         public void AddClientPlayer(ClientPlayer player, ClientPlayerView view)
         {
             _clientPlayer = player;
+            _clientPlayer.SetPlayerView(view);
             _players.Add(player.Id, new PlayerHandler(player, view));
         }
         
         public void AddPlayer(RemotePlayer player, RemotePlayerView view)
         {
+            player.SetPlayerView(view);
             _players.Add(player.Id, new PlayerHandler(player, view));
         }
 

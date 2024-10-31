@@ -6,18 +6,20 @@ namespace Code.Shared
     {
         public readonly string Name;
 
-        private float _speed = 3f;
-        private GameTimer _shootTimer = new GameTimer(0.2f);
+        protected float _speed = 7f;
+        protected GameTimer _shootTimer = new GameTimer(0.2f);
         private BasePlayerManager _playerManager;
         
         protected Vector2 _position;
         protected float _rotation;
         protected byte _health;
+        protected Vector2 _velocity;
 
         public const float Radius = 0.5f;
         public bool IsAlive => _health > 0;
         public byte Health => _health;
         public Vector2 Position => _position;
+        public Vector2 Velocity => _velocity;
         public float Rotation => _rotation;
         public readonly byte Id;
         public int Ping;
@@ -36,7 +38,7 @@ namespace Code.Shared
             _health = 100;
         }
 
-        private void Shoot()
+        protected void Shoot()
         {
             const float MaxLength = 20f;
             Vector2 dir = new Vector2(Mathf.Cos(_rotation), Mathf.Sin(_rotation));

@@ -5,6 +5,8 @@ namespace Code.Client
 {
     public class RemotePlayer : BasePlayer
     {
+        private RemotePlayerView _view;
+        
         private readonly LiteRingBuffer<PlayerState> _buffer = new LiteRingBuffer<PlayerState>(30);
         private float _bufferTime; // Running time in buffer
         private float _interpolationTimer;
@@ -16,6 +18,11 @@ namespace Code.Client
             _health = pjPacket.Health;
             _rotation = pjPacket.InitialPlayerState.Rotation;
             _buffer.Add(pjPacket.InitialPlayerState);
+        }
+        
+        public void SetPlayerView(RemotePlayerView view)
+        {
+            _view = view;
         }
 
         public override void Spawn(Vector2 position)
@@ -35,6 +42,7 @@ namespace Code.Client
                     var singleData = _buffer[0];
                     _position = Vector2.Lerp(_position, singleData.Position, delta * 0.5f); // Reduced speed
                     _rotation = Mathf.Lerp(_rotation, singleData.Rotation, delta * 0.5f); // Reduced speed
+                    _velocity = Vector2.Lerp(_velocity, singleData.Velocity, delta * 0.5f); // Reduced speed
                 }
                 return;
             }
@@ -49,6 +57,7 @@ namespace Code.Client
             // Calculate interpolation factor with error correction for lag
             float lerpT = _interpolationTimer / stateDeltaTime;
             _position = Vector2.Lerp(dataA.Position, dataB.Position, lerpT);
+            // _position = dataB.Position; // No interpolation for position
 
             // Smooth rotation interpolation handling wrap-around at 360 degrees
             float startRotation = dataA.Rotation;
@@ -61,6 +70,8 @@ namespace Code.Client
                     startRotation -= Mathf.PI * 2f;
             }
             _rotation = Mathf.Lerp(startRotation, endRotation, lerpT);
+            
+            _velocity = Vector2.Lerp(dataA.Velocity, dataB.Velocity, lerpT);
 
             // Update interpolation timer
             _interpolationTimer += delta;
@@ -83,16 +94,16 @@ namespace Code.Client
         public void OnPlayerState(PlayerState state)
         {
             // Skip outdated states
-            if (_buffer.Count > 0 && NetworkGeneral.SeqDiff(state.Tick, _buffer.Last.Tick) <= 0)
-                return;
+            // if (_buffer.Count > 0 && NetworkGeneral.SeqDiff(state.Tick, _buffer.Last.Tick) <= 0)
+            //     return;
 
             // Determine if time adjustment is needed
             float timeDiff = state.Time - (_buffer.Count > 0 ? _buffer.Last.Time : 0f);
-            if (timeDiff < LogicTimerClient.FixedDelta)
-            {
-                Debug.LogWarning($"Skipping outdated state with diff {timeDiff}");
-                return;
-            }
+            // if (timeDiff < LogicTimerClient.FixedDelta * 0.5f)
+            // {
+            //     Debug.LogWarning($"Skipping outdated state with diff {timeDiff}");
+            //     return;
+            // }
 
             _bufferTime += timeDiff;
             // Prevent excessive buffering by dynamically adjusting the buffer

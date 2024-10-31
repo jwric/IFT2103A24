@@ -8,8 +8,6 @@ namespace Code.Shared
         public const float FramesPerSecond = 30.0f;
         public const float FixedDelta = 1.0f / FramesPerSecond;
 
-        public float time = 0f;
-        
         private double _accumulator;
         private long _lastTime;
 
@@ -46,7 +44,6 @@ namespace Code.Shared
             {
                 _action();
                 _accumulator -= FixedDelta;
-                time += FixedDelta;
             }
         }
     }

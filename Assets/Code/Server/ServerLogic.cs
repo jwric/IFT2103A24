@@ -13,6 +13,7 @@ namespace Code.Server
 {
     public class ServerLogic : MonoBehaviour, INetEventListener
     {
+        [SerializeField] private ServerPlayerView _serverPlayerViewPrefab;
         [SerializeField] private Text _debugText;
 
         private NetManager _netManager;
@@ -67,8 +68,14 @@ namespace Code.Server
             await Task.Delay(SimulatedLagMs); // Delay to simulate lag
         }
 
+        private void FixedUpdate()
+        {
+            // Physics2D.Simulate(Time.fixedDeltaTime);
+        }
+
         private void OnLogicUpdate()
         {
+            // Physics2D.Simulate(LogicTimerClient.FixedDelta);
             // Debug.Log("Server tick: " + _serverTick);
             _serverTick = (ushort)((_serverTick + 1) % NetworkGeneral.MaxGameSequence);
             
@@ -134,8 +141,10 @@ namespace Code.Server
         {
             Debug.Log("[S] Join packet received: " + joinPacket.UserName);
             var player = new ServerPlayer(_playerManager, joinPacket.UserName, peer);
-            _playerManager.AddPlayer(player);
+            var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
+            _playerManager.AddPlayer(player, playerView);
 
+            
             player.Spawn(new Vector2(Random.Range(-2f, 2f), Random.Range(-2f, 2f)));
 
             //Send join accept

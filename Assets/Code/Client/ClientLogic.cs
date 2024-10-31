@@ -18,7 +18,6 @@ namespace Code.Client
         [SerializeField] private ShootEffect _shootEffectPrefab;
         [SerializeField] private CameraFollow _camera;
         
-        
         private Action<DisconnectInfo> _onDisconnected;
         private GamePool<ShootEffect> _shootsPool;
         
@@ -35,8 +34,6 @@ namespace Code.Client
         private ClientPlayerManager _playerManager;
         private int _ping;
         
-        public float LogicTime => LogicTimer.time;
-
         public static LogicTimerClient LogicTimer { get; private set; }
 
         private ShootEffect ShootEffectContructor()
@@ -75,7 +72,12 @@ namespace Code.Client
         {
             _playerManager.LogicUpdate();
         }
-        
+
+        private void FixedUpdate()
+        {
+            // Physics2D.Simulate(Time.fixedDeltaTime);
+        }
+
         float _simulatedLag = 0;
 
         private void Update()
@@ -90,7 +92,7 @@ namespace Code.Client
                         $"LastServerTick: {_lastServerTick}\n" +
                         $"StoredCommands: {_playerManager.OurPlayer.StoredCommands}\n" +
                         $"Ping: {_ping}" +
-                        $"\ndt: {Time.deltaTime * 1000:F2}ms");
+                        $"\ndt: {Time.fixedTime * 1000:F2}ms");
 
                 string p_debug = "";
                 foreach (var p in _playerManager)

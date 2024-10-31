@@ -634,6 +634,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1e51c98f0b54146429c775c426760c8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _serverPlayerViewPrefab: {fileID: 7633184634824705894, guid: 8d8db8a1aa89650439cfabb4a2084527,
+    type: 3}
   _debugText: {fileID: 304270067}
 --- !u!4 &892645885
 Transform:
@@ -1240,7 +1242,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _clientPlayerViewPrefab: {fileID: 7556605251219990148, guid: 4a0b43f6f6aa8d94885a8928324663ae,
     type: 3}
-  _remotePlayerViewPrefab: {fileID: 2657010345741789178, guid: 286a2aeb6d53b6140a311cbe617d000f,
+  _remotePlayerViewPrefab: {fileID: -8775404657073536082, guid: 6d2b527ea5f8899418a11972ca85434c,
     type: 3}
   _debugText: {fileID: 1306777469}
   _shootEffectPrefab: {fileID: 8525329206789753033, guid: 34cd9b45af10c374daabd0023264392f,

@@ -6,6 +6,7 @@ namespace Code.Client
 { 
     public class ClientPlayer : BasePlayer
     {
+        private ClientPlayerView _view;
         private PlayerInputPacket _nextCommand;
         private readonly ClientLogic _clientLogic;
         private readonly ClientPlayerManager _playerManager;
@@ -33,6 +34,11 @@ namespace Code.Client
             _packets = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
             _clientLogic = clientLogic;
         }
+        
+        public void SetPlayerView(ClientPlayerView view)
+        {
+            _view = view;
+        }
 
         public void ReceiveServerState(ServerState serverState, PlayerState ourState)
         {
@@ -49,14 +55,40 @@ namespace Code.Client
             float timeToRecv = Time.time - _lastRecvTime;
             _lastRecvTime = Time.time;
 
-            Debug.Log($"Recv server state: tickTime: {_tickTime}, sent: {_sentPackets}, timeToRecv: {timeToRecv}");
+            // Debug.Log($"Recv server state: tickTime: {_tickTime}, sent: {_sentPackets}, timeToRecv: {timeToRecv}");
             _tickTime = 0f;
             _sentPackets = 0;
             _lastServerState = serverState;
 
+            var lastPos = _view.Rb.position;
+            var lastVel = _view.Rb.velocity;
+            
+            var newPos = ourState.Position;
+            var newVel = ourState.Velocity;
+            
+            // check if we rolled back
+            // calculate distance dotting with velocity
+            float dist = Vector2.Dot(newPos - lastPos, newVel.normalized);
+            if (dist < 0)
+            {
+                Debug.Log($"[C] Player rolled back: {dist}");
+                // _predictionPlayerStates.FastClear();
+                // _nextCommand.Id = serverState.LastProcessedCommand;
+            }
+            
+            
             //sync
             _position = ourState.Position;
             _rotation = ourState.Rotation;
+            
+            // log prediction pos vs server pos
+            Debug.Log($"[C] Player pos diff: {Vector2.Distance(ourState.Position, _view.Rb.position)}");
+            Rigidbody2D rb = _view.Rb;
+            rb.MovePosition(ourState.Position);
+            // rb.MoveRotation(ourState.Rotation * Mathf.Rad2Deg);
+            // _rotation = ourState.Rotation;
+            rb.velocity = ourState.Velocity;
+            
             if (_predictionPlayerStates.Count == 0)
                 return;
 
@@ -93,7 +125,7 @@ namespace Code.Client
             base.Spawn(position);
         }
 
-        public void SetInput(Vector2 velocity, float rotation, bool fire)
+        public void SetInput(Vector2 velocity, float rotation, bool fire, float dt)
         {
             _nextCommand.Keys = 0;
             if(fire)
@@ -112,13 +144,13 @@ namespace Code.Client
             
             //Debug.Log($"[C] SetInput: {_nextCommand.Keys}");
             
-            UpdateLocal(Time.deltaTime);
+            UpdateLocal(dt);
         }
 
         public override void Update(float delta)
         {
-            LastPosition = _position;
-            LastRotation = _rotation;
+            LastPosition = _view.Rb.position;
+            LastRotation = _view.Rb.rotation;
 
             // _updateCount++;
             // // if (_updateCount == 3)
@@ -136,7 +168,37 @@ namespace Code.Client
             _packets.FastClear();
             
         }
-        
+
+        public override void ApplyInput(PlayerInputPacket command, float delta)
+        {
+            Vector2 velocity = Vector2.zero;
+            
+            if ((command.Keys & MovementKeys.Up) != 0)
+                velocity.y = -1f;
+            if ((command.Keys & MovementKeys.Down) != 0)
+                velocity.y = 1f;
+            
+            if ((command.Keys & MovementKeys.Left) != 0)
+                velocity.x = -1f;
+            if ((command.Keys & MovementKeys.Right) != 0)
+                velocity.x = 1f;     
+            
+            Rigidbody2D rb = _view.Rb;
+            
+            _view.Move(velocity.normalized * (_speed * delta));
+            _rotation = command.Rotation;
+
+            if ((command.Keys & MovementKeys.Fire) != 0)
+            {
+                if (_shootTimer.IsTimeElapsed)
+                {
+                    _shootTimer.Reset();
+                    Shoot();
+                }
+            }
+
+        }
+
         public void UpdateLocal(float delta)
         {
             _nextCommand.Id = (ushort)((_nextCommand.Id + 1) % NetworkGeneral.MaxGameSequence);

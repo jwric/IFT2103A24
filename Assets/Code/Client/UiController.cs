@@ -20,6 +20,8 @@ namespace Code.Client
 
         public void OnHostClick()
         {
+            _clientLogic.enabled = false;
+            _serverLogic.enabled = true;
             _serverLogic.StartServer();
             _uiObject.SetActive(false);
             _clientLogic.Connect("localhost", OnDisconnected);
@@ -33,6 +35,8 @@ namespace Code.Client
 
         public void OnConnectClick()
         {
+            _clientLogic.enabled = true;
+            _serverLogic.enabled = false;
             _uiObject.SetActive(false);
             _clientLogic.Connect(_ipField.text, OnDisconnected);
         }

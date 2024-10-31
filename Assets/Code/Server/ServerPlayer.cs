@@ -6,6 +6,7 @@ namespace Code.Server
 {
     public class ServerPlayer : BasePlayer
     {
+        private ServerPlayerView _playerView;
         private readonly ServerPlayerManager _playerManager;
         public readonly NetPeer AssociatedPeer;
         public PlayerState NetworkState;
@@ -26,6 +27,11 @@ namespace Code.Server
             AssociatedPeer = peer;
             peer.Tag = this;  // Allows easy identification of this player through the peer
             NetworkState = new PlayerState { Id = (byte)peer.Id };
+        }
+        
+        public void SetPlayerView(ServerPlayerView playerView)
+        {
+            _playerView = playerView;
         }
 
         // Applies player input if it's newer than the last processed command
@@ -55,7 +61,7 @@ namespace Code.Server
                 // New tick, reset tick time
                 if (tickDiff > 0)
                 {
-                    Debug.Log($"Num exceeding: {_numExceeding} (total {TickUpdateCount} updates)");
+                    // Debug.Log($"Num exceeding: {_numExceeding} (total {TickUpdateCount} updates)");
                     // New tick, reset tick time
                     _tickTime = 0f;
                     TickUpdateCount = 0;
@@ -88,7 +94,41 @@ namespace Code.Server
             LastProcessedCommandTime = command.Time;
             // Update the tick of the last processed command
             LastProcessedCommandTick = command.ServerTick;
-            base.ApplyInput(command, delta);
+
+            // Apply the input command
+            {
+                Vector2 velocity = Vector2.zero;
+
+                if ((command.Keys & MovementKeys.Up) != 0)
+                    velocity.y = -1f;
+                if ((command.Keys & MovementKeys.Down) != 0)
+                    velocity.y = 1f;
+
+                if ((command.Keys & MovementKeys.Left) != 0)
+                    velocity.x = -1f;
+                if ((command.Keys & MovementKeys.Right) != 0)
+                    velocity.x = 1f;
+
+                // _position += velocity.normalized * (base._speed * delta);
+                _playerView.Move(velocity.normalized * (base._speed * delta));
+                _playerView.SetRotation(command.Rotation);
+
+
+                _position = _playerView.Position;
+                _velocity = _playerView.Velocity;
+                _rotation = _playerView.Rotation;
+                // _rotation = command.Rotation;
+
+                if ((command.Keys & MovementKeys.Fire) != 0)
+                {
+                    if (_shootTimer.IsTimeElapsed)
+                    {
+                        _shootTimer.Reset();
+                        Shoot();
+                    }
+                }
+            }
+            
         }
 
         // ChangeState method to set position and rotation
@@ -108,10 +148,11 @@ namespace Code.Server
             base.Update(delta);
 
             // Update the network state with the player's latest position, rotation, and tick information
-            NetworkState.Position = _position;
-            NetworkState.Rotation = _rotation;
+            NetworkState.Position = _playerView.Position;
+            NetworkState.Velocity = _playerView.Velocity;
+            NetworkState.Rotation = _playerView.Rotation;
             NetworkState.Tick = LastProcessedCommandId;
-            NetworkState.Time = LastProcessedCommandTime;
+            NetworkState.Time = Time.time;
             // Debug.Log($"Player {Id} updated to tick {NetworkState.Tick} at {NetworkState.Time}");
             // Draw a cross at the player's position for visual debugging
             DrawDebugCross(Position, 0.1f, Color.white);
