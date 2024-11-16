@@ -285,7 +285,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 119
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -1240,7 +1240,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a77c76b7885899499706477e4e0eeb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _clientPlayerViewPrefab: {fileID: 7556605251219990148, guid: 4a0b43f6f6aa8d94885a8928324663ae,
+  _clientPlayerViewPrefab: {fileID: 7556605251219990148, guid: ed7f016626b0770408173c004a0c1e1f,
     type: 3}
   _remotePlayerViewPrefab: {fileID: -8775404657073536082, guid: 6d2b527ea5f8899418a11972ca85434c,
     type: 3}
@@ -1248,6 +1248,7 @@ MonoBehaviour:
   _shootEffectPrefab: {fileID: 8525329206789753033, guid: 34cd9b45af10c374daabd0023264392f,
     type: 3}
   _camera: {fileID: 519420033}
+  RewindGO: {fileID: 151283213529981653, guid: 4a0b43f6f6aa8d94885a8928324663ae, type: 3}
 --- !u!4 &1732463074
 Transform:
   m_ObjectHideFlags: 0

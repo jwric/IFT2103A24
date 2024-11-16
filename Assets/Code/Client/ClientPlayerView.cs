@@ -37,7 +37,7 @@ namespace Code.Client
             _rb.AddForce(amount, ForceMode2D.Impulse);
         }
         
-        private void Update()
+        private void FixedUpdate()
         {
             var vert = Input.GetAxis("Vertical");
             var horz = Input.GetAxis("Horizontal");
@@ -48,7 +48,7 @@ namespace Code.Client
             Vector2 mousePos = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
             Vector2 dir = mousePos - _rb.position;
             float rotation = Mathf.Atan2(dir.y, dir.x);
-            _player.SetInput(velocty, rotation, fire > 0f, Time.deltaTime);
+            _player.SetInput(velocty, rotation, fire > 0f, Time.fixedDeltaTime);
 
             float lerpT = ClientLogic.LogicTimer.LerpAlpha;
             // transform.position = Vector2.Lerp(_player.LastPosition, _player.Position, lerpT);
@@ -66,10 +66,6 @@ namespace Code.Client
             _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
         }
         
-        private void FixedUpdate()
-        {
-        }
-
         public void Destroy()
         {
             Destroy(gameObject);

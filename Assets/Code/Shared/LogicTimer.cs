@@ -5,7 +5,7 @@ namespace Code.Shared
 {
     public class LogicTimerClient
     {
-        public const float FramesPerSecond = 30.0f;
+        public const float FramesPerSecond = 50.0f;
         public const float FixedDelta = 1.0f / FramesPerSecond;
 
         private double _accumulator;
@@ -50,7 +50,7 @@ namespace Code.Shared
     
     public class LogicTimerServer
     {
-        public const float FramesPerSecond = 30.0f;
+        public const float FramesPerSecond = 50.0f;
         public const float FixedDelta = 1.0f / FramesPerSecond;
 
         private double _accumulator;

@@ -83,7 +83,7 @@ namespace Code.Client
                 _interpolationTimer -= stateDeltaTime;
                 _bufferTime -= stateDeltaTime;
             }
-
+            
             // Adaptive smoothing based on buffer count and buffer time
             if (_buffer.Count < 3 && _bufferTime < TargetBufferTime * 0.5f)
             {
@@ -105,6 +105,11 @@ namespace Code.Client
             //     return;
             // }
 
+            if (timeDiff < 0)
+            {
+                return;
+            }
+            
             _bufferTime += timeDiff;
             // Prevent excessive buffering by dynamically adjusting the buffer
             if (_bufferTime > TargetBufferTime * 1.5f)

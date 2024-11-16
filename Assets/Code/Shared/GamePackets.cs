@@ -131,7 +131,7 @@ namespace Code.Shared
         public ushort Tick;
         public float Time;
 
-        public const int Size = 1 + 8 + 4 + 2;
+        public const int Size = sizeof(byte) + sizeof(float)*6 + sizeof(ushort);
         
         public void Serialize(NetDataWriter writer)
         {

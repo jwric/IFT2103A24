@@ -1,6 +1,8 @@
+using System.Collections;
 using Code.Shared;
 using LiteNetLib;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Code.Client
 { 
@@ -20,6 +22,8 @@ namespace Code.Client
         private float _lastRecvTime;
         private int _packetsToSend;
         
+        private Rigidbody2D _rewindRb;  // Rigidbody for the rewind scene
+        
         private readonly LiteRingBuffer<PlayerInputPacket> _packets;
 
         public Vector2 LastPosition { get; private set; }
@@ -27,12 +31,30 @@ namespace Code.Client
 
         public int StoredCommands => _predictionPlayerStates.Count;
 
+        public Scene RewindScene { get; set; }
+        public PhysicsScene2D RewindPhysicsScene { get; set; }
+        
         public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, string name, byte id) : base(manager, name, id)
         {
             _playerManager = manager;
             _predictionPlayerStates = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
             _packets = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
             _clientLogic = clientLogic;
+            
+            // Create a copy eof the Rigidbody for use in the rewind scene
+            var hi = Object.Instantiate(_clientLogic.RewindGO);
+            _rewindRb = hi.GetComponent<Rigidbody2D>();
+            
+            // Move the rewind Rigidbody to the rewind scene
+            
+            clientLogic.StartCoroutine(MoveObjectToSceneAfterDelay(hi));
+            
+        }
+        
+        private IEnumerator MoveObjectToSceneAfterDelay(GameObject obj)
+        {
+            yield return null; // Wait for one frame to ensure everything is fully initialized
+            SceneManager.MoveGameObjectToScene(obj, RewindScene);
         }
         
         public void SetPlayerView(ClientPlayerView view)
@@ -40,6 +62,69 @@ namespace Code.Client
             _view = view;
         }
 
+        private void ApplyInputToRigidbody(Rigidbody2D rb, PlayerInputPacket command, float delta)
+        {
+            Vector2 velocity = Vector2.zero;
+
+            if ((command.Keys & MovementKeys.Up) != 0)
+                velocity.y = -1f;
+            if ((command.Keys & MovementKeys.Down) != 0)
+                velocity.y = 1f;
+
+            if ((command.Keys & MovementKeys.Left) != 0)
+                velocity.x = -1f;
+            if ((command.Keys & MovementKeys.Right) != 0)
+                velocity.x = 1f;
+
+            // _view.Move(velocity.normalized * (_speed * delta));
+            rb.AddForce(velocity.normalized * (_speed * delta), ForceMode2D.Impulse);
+            _rotation = command.Rotation;
+
+            if ((command.Keys & MovementKeys.Fire) != 0)
+            {
+                if (_shootTimer.IsTimeElapsed)
+                {
+                    _shootTimer.Reset();
+                    Shoot();
+                }
+            }
+        }
+
+        
+        private void SyncWithServerState(PlayerState ourState)
+        {
+            _position = ourState.Position;
+            _rotation = ourState.Rotation;
+
+            Debug.Log($"[C] Player pos diff: {Vector2.Distance(ourState.Position, _view.Rb.position)}");
+
+            // Sync Rigidbody with the server state
+            Rigidbody2D rb = _view.Rb;
+            rb.MovePosition(ourState.Position);
+            rb.velocity = ourState.Velocity;
+        }
+        
+        private void RewindAndReapplyPredictions(int diff)
+        {
+            // Set the rewind Rigidbody to match the server state
+
+            // Remove the old commands from prediction state buffer
+            _predictionPlayerStates.RemoveFromStart(diff + 1);
+
+            // Apply predictions in the rewind scene
+            foreach (var state in _predictionPlayerStates)
+            {
+                ApplyInputToRigidbody(_rewindRb, state, state.Delta);
+                RewindPhysicsScene.Simulate(state.Delta);
+            }
+
+            // Update the view with the result of the rewind
+            _view.Rb.position = _rewindRb.position;
+            _view.Rb.velocity = _rewindRb.velocity;
+            _view.Rb.rotation = _rewindRb.rotation;
+        }
+
+        
         public void ReceiveServerState(ServerState serverState, PlayerState ourState)
         {
             if (!_firstStateReceived)
@@ -75,19 +160,11 @@ namespace Code.Client
                 // _predictionPlayerStates.FastClear();
                 // _nextCommand.Id = serverState.LastProcessedCommand;
             }
-            
-            
-            //sync
-            _position = ourState.Position;
-            _rotation = ourState.Rotation;
-            
-            // log prediction pos vs server pos
-            Debug.Log($"[C] Player pos diff: {Vector2.Distance(ourState.Position, _view.Rb.position)}");
-            Rigidbody2D rb = _view.Rb;
-            rb.MovePosition(ourState.Position);
-            // rb.MoveRotation(ourState.Rotation * Mathf.Rad2Deg);
-            // _rotation = ourState.Rotation;
-            rb.velocity = ourState.Velocity;
+            _rewindRb.position = newPos;
+            _rewindRb.velocity = newVel;
+            _rewindRb.rotation = ourState.Rotation;
+
+            SyncWithServerState(ourState);
             
             if (_predictionPlayerStates.Count == 0)
                 return;
@@ -98,14 +175,25 @@ namespace Code.Client
             //apply prediction
             if (diff >= 0 && diff < _predictionPlayerStates.Count)
             {
+                //move the player to the rewind scene here
+                
                 // Debug.Log($"Received server state: {serverState.LastProcessedCommand}, OUR: {_predictionPlayerStates.First.Id}, DF:{diff}, total: {_predictionPlayerStates.Count}, rolledPos: {_position}");
 
                 // Debug.Log($"[OK]  SP: {serverState.LastProcessedCommand}, OUR: {_predictionPlayerStates.First.Id}, DF:{diff}");
-                _predictionPlayerStates.RemoveFromStart(diff+1);
+                // _predictionPlayerStates.RemoveFromStart(diff+1);
 
-                foreach (var state in _predictionPlayerStates)
-                    ApplyInput(state, state.Delta);
-                // Debug.Log($"After Received server total: {_predictionPlayerStates.Count}, rolledPos: {_position}");
+                // foreach (var state in _predictionPlayerStates)
+                // {
+                //     ApplyInput(state, state.Delta);
+                //     RewindScene.Simulate(state.Delta);                    
+                // }
+                
+                RewindAndReapplyPredictions(diff);
+                
+                
+                // move the player back to the current scene
+                    
+                
             }
             else if(diff >= _predictionPlayerStates.Count)
             {
@@ -144,67 +232,19 @@ namespace Code.Client
             
             //Debug.Log($"[C] SetInput: {_nextCommand.Keys}");
             
-            UpdateLocal(dt);
+            // UpdateLocal(dt);
         }
 
         public override void Update(float delta)
         {
             LastPosition = _view.Rb.position;
             LastRotation = _view.Rb.rotation;
-
-            // _updateCount++;
-            // // if (_updateCount == 3)
-            // {
-            //     _updateCount = 0;
-            //     foreach (var t in _predictionPlayerStates)
-            //         _clientLogic.SendPacketSerializable(PacketType.Movement, t, DeliveryMethod.Unreliable);
-            // }
-            //
-            // base.Update(delta);
             
             
-            foreach (var t in _packets)
-                _clientLogic.SendPacketSerializable(PacketType.Movement, t, DeliveryMethod.Unreliable);
-            _packets.FastClear();
-            
-        }
-
-        public override void ApplyInput(PlayerInputPacket command, float delta)
-        {
-            Vector2 velocity = Vector2.zero;
-            
-            if ((command.Keys & MovementKeys.Up) != 0)
-                velocity.y = -1f;
-            if ((command.Keys & MovementKeys.Down) != 0)
-                velocity.y = 1f;
-            
-            if ((command.Keys & MovementKeys.Left) != 0)
-                velocity.x = -1f;
-            if ((command.Keys & MovementKeys.Right) != 0)
-                velocity.x = 1f;     
-            
-            Rigidbody2D rb = _view.Rb;
-            
-            _view.Move(velocity.normalized * (_speed * delta));
-            _rotation = command.Rotation;
-
-            if ((command.Keys & MovementKeys.Fire) != 0)
-            {
-                if (_shootTimer.IsTimeElapsed)
-                {
-                    _shootTimer.Reset();
-                    Shoot();
-                }
-            }
-
-        }
-
-        public void UpdateLocal(float delta)
-        {
             _nextCommand.Id = (ushort)((_nextCommand.Id + 1) % NetworkGeneral.MaxGameSequence);
             _nextCommand.ServerTick = _lastServerState.Tick;
             _nextCommand.Delta = delta;
-            _nextCommand.Time = Time.time;
+            _nextCommand.Time = Time.fixedTime;
             ApplyInput(_nextCommand, delta);
             if (_predictionPlayerStates.IsFull)
             {
@@ -225,11 +265,36 @@ namespace Code.Client
             _sentPackets++;
             _packetsToSend++;            
             
-            _packets.Add(_nextCommand);
+            // _packets.Add(_nextCommand);
             
             // _clientLogic.SendPacketSerializable(PacketType.Movement, _nextCommand, DeliveryMethod.Unreliable);
             
+            
+            // foreach (var t in _predictionPlayerStates)
+            //     _clientLogic.SendPacketSerializable(PacketType.Movement, t, DeliveryMethod.Unreliable);
+            // // _packets.FastClear();
+            //
+            
+            _updateCount++;
+            if (_updateCount == 3)
+            {
+                _updateCount = 0;
+                foreach (var t in _predictionPlayerStates)
+                    _clientLogic.SendPacketSerializable(PacketType.Movement, t, DeliveryMethod.Unreliable);
+            }
+            
             base.Update(delta);
+            
+        }
+
+        public override void ApplyInput(PlayerInputPacket command, float delta)
+        {
+            ApplyInputToRigidbody(_view.Rb, command, delta);
+        }
+
+        public void UpdateLocal(float delta)
+        {
+
         }
     }
 }

@@ -5,6 +5,7 @@ using Code.Shared;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Random = System.Random;
 
@@ -43,6 +44,11 @@ namespace Code.Client
             return eff;
         }
         
+        private PhysicsScene2D _mainScene;
+        private Scene _rewindScene;
+
+        public GameObject RewindGO;
+        
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -50,7 +56,7 @@ namespace Code.Client
             _cachedServerState = new ServerState();
             _cachedShootData = new ShootPacket();
             _userName = Environment.MachineName + " " + r.Next(100000);
-            LogicTimer = new LogicTimerClient(OnLogicUpdate);
+            LogicTimer = new LogicTimerClient(() => {});
             _writer = new NetDataWriter();
             _playerManager = new ClientPlayerManager(this);
             _shootsPool = new GamePool<ShootEffect>(ShootEffectContructor, 100);
@@ -63,9 +69,30 @@ namespace Code.Client
             _netManager = new NetManager(this)
             {
                 AutoRecycle = true,
-                IPv6Enabled = true
+                IPv6Enabled = true,
+                SimulateLatency = true,
+                SimulationMaxLatency = 100,
+                SimulationMinLatency = 50,
+                SimulatePacketLoss = true,
+                SimulationPacketLossChance = 10
+                
             };
             _netManager.Start();
+        }
+
+        private void Start()
+        {
+            LoadSceneParameters parameters = new LoadSceneParameters(LoadSceneMode.Additive, LocalPhysicsMode.Physics2D);
+            var scene2 = SceneManager.LoadScene("RewindScene", parameters);
+
+            SceneManager.sceneLoaded += (scene, mode) =>
+            {
+                Debug.Log($"Scene loaded: {scene.name}");
+                if (scene.name == "RewindScene")
+                {
+                    _rewindScene = scene;
+                }
+            };
         }
 
         private void OnLogicUpdate()
@@ -76,6 +103,7 @@ namespace Code.Client
         private void FixedUpdate()
         {
             // Physics2D.Simulate(Time.fixedDeltaTime);
+            OnLogicUpdate();
         }
 
         float _simulatedLag = 0;
@@ -170,6 +198,8 @@ namespace Code.Client
             Debug.Log("[C] Join accept. Received player id: " + packet.Id);
             _lastServerTick = packet.ServerTick;
             var clientPlayer = new ClientPlayer(this, _playerManager, _userName, packet.Id);
+            clientPlayer.RewindScene = _rewindScene;
+            clientPlayer.RewindPhysicsScene = _rewindScene.GetPhysicsScene2D();
             var view = ClientPlayerView.Create(_clientPlayerViewPrefab, clientPlayer);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);

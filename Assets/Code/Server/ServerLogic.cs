@@ -29,18 +29,18 @@ namespace Code.Server
         private ServerState _serverState;
         public ushort Tick => _serverTick;
 
-        public void StartServer()
+        public void StartServer(int port)
         {
             if (_netManager.IsRunning)
                 return;
-            _netManager.Start(10515);
+            _netManager.Start(port);
             _logicTimer.Start();
         }
 
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            _logicTimer = new LogicTimerServer(OnLogicUpdate);
+            _logicTimer = new LogicTimerServer(() => {});
             _packetProcessor = new NetPacketProcessor();
             _playerManager = new ServerPlayerManager(this);
             
@@ -53,7 +53,12 @@ namespace Code.Server
             _packetProcessor.SubscribeReusable<JoinPacket, NetPeer>(OnJoinReceived);
             _netManager = new NetManager(this)
             {
-                AutoRecycle = true
+                AutoRecycle = true,
+                SimulateLatency = true,
+                SimulationMaxLatency = 100,
+                SimulationMinLatency = 50,
+                SimulatePacketLoss = true,
+                SimulationPacketLossChance = 10
             };
         }
 
@@ -71,6 +76,7 @@ namespace Code.Server
         private void FixedUpdate()
         {
             // Physics2D.Simulate(Time.fixedDeltaTime);
+            OnLogicUpdate();
         }
 
         private void OnLogicUpdate()
