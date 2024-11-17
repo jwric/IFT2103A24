@@ -73,13 +73,13 @@ namespace Code.Client
                 AutoRecycle = true,
                 IPv6Enabled = true,
                 SimulateLatency = true,
-                SimulationMaxLatency = 500,
-                SimulationMinLatency = 500,
-                SimulatePacketLoss = false,
+                SimulationMaxLatency = 25 + 10,
+                SimulationMinLatency = 25,
+                SimulatePacketLoss = true,
                 SimulationPacketLossChance = 2
                 
             };
-            Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
+            Physics2D.simulationMode = SimulationMode2D.Script;
             _netManager.Start();
         }
 
@@ -107,7 +107,7 @@ namespace Code.Client
         {
             // Physics2D.Simulate(Time.fixedDeltaTime);
             OnLogicUpdate();
-            // Physics2D.Simulate(Time.fixedDeltaTime);
+            Physics2D.Simulate(Time.fixedDeltaTime);
         }
 
         float _simulatedLag = 0;
