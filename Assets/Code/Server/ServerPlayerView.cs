@@ -14,6 +14,7 @@ namespace Code.Server
         public Vector2 Position => _rb.position;
         public Vector2 Velocity => _rb.velocity;
         public float Rotation => _rb.rotation * Mathf.Deg2Rad;
+        public float AngularVelocity => _rb.angularVelocity;
         
         public static ServerPlayerView Create(ServerPlayerView prefab, ServerPlayer player)
         {
@@ -25,7 +26,12 @@ namespace Code.Server
 
         public void Move(Vector2 amount)
         {
-            _rb.AddForce(amount, ForceMode2D.Impulse);
+            _rb.AddForce(amount, ForceMode2D.Force);
+        }
+        
+        public void Rotate(float amount)
+        {
+            _rb.AddTorque(amount, ForceMode2D.Force);
         }
         
         public void SetRotation(float rotation)

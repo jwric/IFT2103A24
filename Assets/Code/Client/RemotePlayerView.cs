@@ -43,6 +43,7 @@ namespace Code.Client
             _rb.MovePosition(_player.Position);
             _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
             _rb.velocity = _player.Velocity;
+            _rb.angularVelocity = _player.AngularVelocity;
         }
 
         public void Destroy()

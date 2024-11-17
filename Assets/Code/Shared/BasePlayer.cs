@@ -14,6 +14,7 @@ namespace Code.Shared
         protected float _rotation;
         protected byte _health;
         protected Vector2 _velocity;
+        protected float _angularVelocity;
 
         public const float Radius = 0.5f;
         public bool IsAlive => _health > 0;
@@ -21,6 +22,7 @@ namespace Code.Shared
         public Vector2 Position => _position;
         public Vector2 Velocity => _velocity;
         public float Rotation => _rotation;
+        public float AngularVelocity => _angularVelocity;
         public readonly byte Id;
         public int Ping;
 

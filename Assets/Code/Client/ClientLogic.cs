@@ -17,7 +17,7 @@ namespace Code.Client
         [SerializeField] private RemotePlayerView _remotePlayerViewPrefab;
         [SerializeField] private Text _debugText;
         [SerializeField] private ShootEffect _shootEffectPrefab;
-        [SerializeField] private CameraFollow _camera;
+        [SerializeField] public CameraFollow _camera;
         
         private Action<DisconnectInfo> _onDisconnected;
         private GamePool<ShootEffect> _shootsPool;
@@ -43,6 +43,8 @@ namespace Code.Client
             eff.Init(e => _shootsPool.Put(e));
             return eff;
         }
+        
+        public bool PredictionEnabled = true;
         
         private PhysicsScene2D _mainScene;
         private Scene _rewindScene;
@@ -71,12 +73,13 @@ namespace Code.Client
                 AutoRecycle = true,
                 IPv6Enabled = true,
                 SimulateLatency = true,
-                SimulationMaxLatency = 100,
-                SimulationMinLatency = 50,
-                SimulatePacketLoss = true,
-                SimulationPacketLossChance = 10
+                SimulationMaxLatency = 500,
+                SimulationMinLatency = 500,
+                SimulatePacketLoss = false,
+                SimulationPacketLossChance = 2
                 
             };
+            Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
             _netManager.Start();
         }
 
@@ -104,6 +107,7 @@ namespace Code.Client
         {
             // Physics2D.Simulate(Time.fixedDeltaTime);
             OnLogicUpdate();
+            // Physics2D.Simulate(Time.fixedDeltaTime);
         }
 
         float _simulatedLag = 0;

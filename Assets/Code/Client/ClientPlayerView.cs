@@ -8,6 +8,8 @@ namespace Code.Client
     public class ClientPlayerView : MonoBehaviour, IPlayerView
     {
         [SerializeField] private TextMesh _name;
+        [SerializeField] private GameObject _view;
+
         private ClientPlayer _player;
         private Camera _mainCamera;
         
@@ -23,7 +25,16 @@ namespace Code.Client
             obj._player = player;
             obj._name.text = player.Name;
             obj._mainCamera = Camera.main;
+            
+            obj._view = Instantiate(obj._view);
+            
             return obj;
+        }
+        
+        public void UpdateView(Vector2 position, float rotation)
+        {
+            _view.transform.position = position;
+            _view.transform.rotation = Quaternion.Euler(0f, 0f, rotation * Mathf.Rad2Deg);
         }
         
         private void Awake()
@@ -34,10 +45,10 @@ namespace Code.Client
         
         public void Move(Vector2 amount)
         {
-            _rb.AddForce(amount, ForceMode2D.Impulse);
+            _rb.AddForce(amount, ForceMode2D.Force);
         }
         
-        private void FixedUpdate()
+        private void Update()
         {
             var vert = Input.GetAxis("Vertical");
             var horz = Input.GetAxis("Horizontal");
@@ -48,7 +59,7 @@ namespace Code.Client
             Vector2 mousePos = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
             Vector2 dir = mousePos - _rb.position;
             float rotation = Mathf.Atan2(dir.y, dir.x);
-            _player.SetInput(velocty, rotation, fire > 0f, Time.fixedDeltaTime);
+            _player.SetInput(velocty, rotation, fire > 0f);
 
             float lerpT = ClientLogic.LogicTimer.LerpAlpha;
             // transform.position = Vector2.Lerp(_player.LastPosition, _player.Position, lerpT);
@@ -63,8 +74,9 @@ namespace Code.Client
             }
             
             float angle = Mathf.Lerp(lastAngle, _player.Rotation, lerpT);
-            _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
+            // _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
         }
+        
         
         public void Destroy()
         {

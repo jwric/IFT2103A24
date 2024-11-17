@@ -43,6 +43,7 @@ namespace Code.Client
                     _position = Vector2.Lerp(_position, singleData.Position, delta * 0.5f); // Reduced speed
                     _rotation = Mathf.Lerp(_rotation, singleData.Rotation, delta * 0.5f); // Reduced speed
                     _velocity = Vector2.Lerp(_velocity, singleData.Velocity, delta * 0.5f); // Reduced speed
+                    _angularVelocity = Mathf.Lerp(_angularVelocity, singleData.AngularVelocity, delta * 0.5f); // Reduced speed
                 }
                 return;
             }
@@ -72,6 +73,8 @@ namespace Code.Client
             _rotation = Mathf.Lerp(startRotation, endRotation, lerpT);
             
             _velocity = Vector2.Lerp(dataA.Velocity, dataB.Velocity, lerpT);
+            
+            _angularVelocity = Mathf.Lerp(dataA.AngularVelocity, dataB.AngularVelocity, lerpT);
 
             // Update interpolation timer
             _interpolationTimer += delta;

@@ -15,6 +15,8 @@ namespace Code.Server
         public ushort LastProcessedCommandTick { get; private set; }
         private ushort _lastTickDiff;
         
+        public PlayerInputPacket LastProcessedCommand { get; private set; }
+        
         private float _tickTime = 0f;
         private bool _isFirstStateReceived = false;
         private int _numExceeding;
@@ -34,13 +36,18 @@ namespace Code.Server
             _playerView = playerView;
         }
 
+
+        private bool test = false;
         // Applies player input if it's newer than the last processed command
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
+            test = true;
             // Ensure only new commands are processed
             if (NetworkGeneral.SeqDiff(command.Id, LastProcessedCommandId) <= 0)
             {
+                var gap = NetworkGeneral.SeqDiff(LastProcessedCommandId, command.Id);
                 // Debug.Log($"Player {Id} received an old command {command.Id} (last processed {LastProcessedCommandId})");
+                Debug.Log($"Gap: {gap}");
                 return;
             }
 
@@ -55,7 +62,7 @@ namespace Code.Server
                 // Old tick, ignore
                 if (tickDiff < 0)
                 {
-                    // Debug.LogWarning($"Player {Id} received a command from the past: {command.ServerTick} (last processed {LastProcessedCommandTick})");
+                    Debug.LogWarning($"Player {Id} received a command from the past: {command.ServerTick} (last processed {LastProcessedCommandTick})");
                     return;
                 }
                 // New tick, reset tick time
@@ -81,7 +88,7 @@ namespace Code.Server
             {
                 Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
                 _numExceeding++;
-                return;
+                // return;
             }
             
             // float timeDiff = command.Time - LastProcessedCommandTime;
@@ -94,6 +101,7 @@ namespace Code.Server
             LastProcessedCommandTime = command.Time;
             // Update the tick of the last processed command
             LastProcessedCommandTick = command.ServerTick;
+            LastProcessedCommand = command;
 
             // Apply the input command
             {
@@ -110,13 +118,14 @@ namespace Code.Server
                     velocity.x = 1f;
 
                 // _position += velocity.normalized * (base._speed * delta);
-                _playerView.Move(velocity.normalized * (base._speed * delta));
-                _playerView.SetRotation(command.Rotation);
+                _playerView.Move(velocity.normalized * _speed);
+                // _playerView.SetRotation(command.Rotation);
 
 
                 _position = _playerView.Position;
                 _velocity = _playerView.Velocity;
                 _rotation = _playerView.Rotation;
+                _angularVelocity = _playerView.AngularVelocity;
                 // _rotation = command.Rotation;
 
                 if ((command.Keys & MovementKeys.Fire) != 0)
@@ -147,15 +156,34 @@ namespace Code.Server
         {
             base.Update(delta);
 
+            // // apply forces based on the player's last input
+            // {
+            //     var keys = LastProcessedCommand.Keys;
+            //     Vector2 velocity = Vector2.zero;
+            //     if ((keys & MovementKeys.Up) != 0)
+            //         velocity.y = -1f;
+            //     if ((keys & MovementKeys.Down) != 0)
+            //         velocity.y = 1f;
+            //     if ((keys & MovementKeys.Left) != 0)
+            //         velocity.x = -1f;
+            //     if ((keys & MovementKeys.Right) != 0)
+            //         velocity.x = 1f;
+            //     
+            //     if (velocity != Vector2.zero)
+            //         _playerView.Move(velocity.normalized * _speed);
+            // }
+            
             // Update the network state with the player's latest position, rotation, and tick information
             NetworkState.Position = _playerView.Position;
             NetworkState.Velocity = _playerView.Velocity;
             NetworkState.Rotation = _playerView.Rotation;
+            NetworkState.AngularVelocity = _playerView.AngularVelocity;
             NetworkState.Tick = LastProcessedCommandId;
             NetworkState.Time = Time.time;
             // Debug.Log($"Player {Id} updated to tick {NetworkState.Tick} at {NetworkState.Time}");
             // Draw a cross at the player's position for visual debugging
-            DrawDebugCross(Position, 0.1f, Color.white);
+            DrawDebugCross(Position, 0.1f, test ? Color.green : Color.white);
+            test = false;
         }
 
         // Utility function to draw a cross at the player's position

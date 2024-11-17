@@ -128,10 +128,11 @@ namespace Code.Shared
         public Vector2 Position;
         public Vector2 Velocity;
         public float Rotation;
+        public float AngularVelocity;
         public ushort Tick;
         public float Time;
 
-        public const int Size = sizeof(byte) + sizeof(float)*6 + sizeof(ushort);
+        public const int Size = sizeof(byte) + sizeof(float)*7 + sizeof(ushort);
         
         public void Serialize(NetDataWriter writer)
         {
@@ -139,6 +140,7 @@ namespace Code.Shared
             writer.Put(Position);
             writer.Put(Velocity);
             writer.Put(Rotation);
+            writer.Put(AngularVelocity);
             writer.Put(Tick);
             writer.Put(Time);
         }
@@ -149,6 +151,7 @@ namespace Code.Shared
             Position = reader.GetVector2();
             Velocity = reader.GetVector2();
             Rotation = reader.GetFloat();
+            AngularVelocity = reader.GetFloat();
             Tick = reader.GetUShort();
             Time = reader.GetFloat();
         }

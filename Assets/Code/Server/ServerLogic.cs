@@ -31,6 +31,8 @@ namespace Code.Server
 
         public void StartServer(int port)
         {
+            Physics2D.simulationMode = SimulationMode2D.Script;
+
             if (_netManager.IsRunning)
                 return;
             _netManager.Start(port);
@@ -55,11 +57,13 @@ namespace Code.Server
             {
                 AutoRecycle = true,
                 SimulateLatency = true,
-                SimulationMaxLatency = 100,
-                SimulationMinLatency = 50,
-                SimulatePacketLoss = true,
-                SimulationPacketLossChance = 10
+                SimulationMaxLatency = 500,
+                SimulationMinLatency = 500,
+                SimulatePacketLoss = false,
+                SimulationPacketLossChance = 2
             };
+            
+            
         }
 
         private void OnDestroy()
@@ -75,20 +79,19 @@ namespace Code.Server
 
         private void FixedUpdate()
         {
-            // Physics2D.Simulate(Time.fixedDeltaTime);
             OnLogicUpdate();
         }
 
         private void OnLogicUpdate()
         {
-            // Physics2D.Simulate(LogicTimerClient.FixedDelta);
+            Physics2D.Simulate(Time.fixedDeltaTime);
             // Debug.Log("Server tick: " + _serverTick);
             _serverTick = (ushort)((_serverTick + 1) % NetworkGeneral.MaxGameSequence);
             
             // await SimulateLag();
             
             _playerManager.LogicUpdate();
-            if (_serverTick % 2 == 0)
+            if (_serverTick % 3 == 0)
             {
                 _serverState.Tick = _serverTick;
                 _serverState.PlayerStates = _playerManager.PlayerStates;
