@@ -84,6 +84,7 @@ namespace Code.Client.GameStates
             if (result.Success)
             {
                 IsReady = true;
+                
                 // subscribe to pause menu events
                 var pauseMenu = GameManager.UIManager.PauseMenuController;
                 pauseMenu.OnResume = TogglePause;
@@ -96,6 +97,9 @@ namespace Code.Client.GameStates
                     TogglePause();
                     GameManager.ChangeState<MainMenuState>();
                 };
+                
+                // show game HUD
+                GameManager.UIManager.ShowGameHUD();
                 
                 // sub to disconnect event
                 GameManager.NetworkManager.OnDisconnect += OnDisconnect;
