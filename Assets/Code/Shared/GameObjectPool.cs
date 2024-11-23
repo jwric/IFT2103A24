@@ -2,18 +2,18 @@ using System;
 
 namespace Code.Shared
 {
-    public class GamePool<T> where T : class
+    public class GameObjectPool<T> where T : class
     {
         private readonly T[] _pool;
         private readonly Func<T> _creator;
         private int _count;
 
-        public GamePool(Func<T> creator) : this(creator, 8)
+        public GameObjectPool(Func<T> creator) : this(creator, 8)
         {
 
         }
 
-        public GamePool(Func<T> creator, int capacity)
+        public GameObjectPool(Func<T> creator, int capacity)
         {
             _pool = new T[capacity];
             _creator = creator;
@@ -35,6 +35,17 @@ namespace Code.Shared
         {
             _pool[_count] = gameObject;
             _count++;
+        }
+        
+        public void Dispose()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                if (_pool[i] is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
     }
 }

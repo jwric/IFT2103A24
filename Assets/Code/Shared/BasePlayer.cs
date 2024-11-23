@@ -7,6 +7,7 @@ namespace Code.Shared
         public readonly string Name;
 
         protected float _speed = 7f;
+        protected float _angularSpeed = 0.5f;
         protected GameTimer _shootTimer = new GameTimer(0.2f);
         private BasePlayerManager _playerManager;
         
@@ -49,33 +50,33 @@ namespace Code.Shared
             _playerManager.OnShoot(this, target, player);
         }
 
-        public virtual void ApplyInput(PlayerInputPacket command, float delta)
-        {
-            Vector2 velocity = Vector2.zero;
-            
-            if ((command.Keys & MovementKeys.Up) != 0)
-                velocity.y = -1f;
-            if ((command.Keys & MovementKeys.Down) != 0)
-                velocity.y = 1f;
-            
-            if ((command.Keys & MovementKeys.Left) != 0)
-                velocity.x = -1f;
-            if ((command.Keys & MovementKeys.Right) != 0)
-                velocity.x = 1f;     
-            
-            _position += velocity.normalized * (_speed * delta);
-            _rotation = command.Rotation;
-
-            if ((command.Keys & MovementKeys.Fire) != 0)
-            {
-                if (_shootTimer.IsTimeElapsed)
-                {
-                    _shootTimer.Reset();
-                    Shoot();
-                }
-            }
-            
-        }
+        public abstract void ApplyInput(PlayerInputPacket command, float delta);
+        // {
+        //     Vector2 velocity = Vector2.zero;
+        //     
+        //     if ((command.Keys & MovementKeys.Up) != 0)
+        //         velocity.y = -1f;
+        //     if ((command.Keys & MovementKeys.Down) != 0)
+        //         velocity.y = 1f;
+        //     
+        //     if ((command.Keys & MovementKeys.Left) != 0)
+        //         velocity.x = -1f;
+        //     if ((command.Keys & MovementKeys.Right) != 0)
+        //         velocity.x = 1f;     
+        //     
+        //     _position += velocity.normalized * (_speed * delta);
+        //     _rotation = command.Rotation;
+        //
+        //     if ((command.Keys & MovementKeys.Fire) != 0)
+        //     {
+        //         if (_shootTimer.IsTimeElapsed)
+        //         {
+        //             _shootTimer.Reset();
+        //             Shoot();
+        //         }
+        //     }
+        //     
+        // }
 
         public virtual void Update(float delta)
         {

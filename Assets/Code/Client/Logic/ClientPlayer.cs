@@ -1,13 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using Code.Client.Managers;
 using Code.Shared;
 using LiteNetLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Code.Client
-{ 
+namespace Code.Client.Logic
+{
     public class ClientPlayer : BasePlayer
     {
         private ClientPlayerView _view;
@@ -42,9 +42,8 @@ namespace Code.Client
         
         Dictionary<int, Rigidbody2D> remoteRbs = new Dictionary<int, Rigidbody2D>();
         
-        private Controls _controls;
         
-        public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, string name, byte id, Controls controls) : base(manager, name, id)
+        public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, string name, byte id) : base(manager, name, id)
         {
             _playerManager = manager;
             _predictionPlayerStates = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
@@ -52,15 +51,13 @@ namespace Code.Client
             _clientPlayerStates = new LiteRingBuffer<PlayerState>(MaxStoredCommands);
             _clientLogic = clientLogic;
             
-            _controls = controls;
-            
             // Create a copy eof the Rigidbody for use in the rewind scene
             var hi = Object.Instantiate(_clientLogic.RewindGO);
             _rewindRb = hi.GetComponent<Rigidbody2D>();
             
             // Move the rewind Rigidbody to the rewind scene
             
-            clientLogic.StartCoroutine(MoveObjectToSceneAfterDelay(hi));
+            GameManager.Instance.StartCoroutine(MoveObjectToSceneAfterDelay(hi));
         }
         
         private IEnumerator MoveObjectToSceneAfterDelay(GameObject obj)
@@ -104,15 +101,11 @@ namespace Code.Client
         
         private void RewindAndReapplyPredictions(PlayerState ourState)
         {
-            // Remove the old commands from prediction state buffer
-
-            Vector2 prevPosition = _view.Rb.position + _positionError;
-            float prevRotation = _view.Rb.rotation + _rotationError;
+            // Vector2 prevPosition = _view.Rb.position + _positionError;
+            // float prevRotation = _view.Rb.rotation + _rotationError;
             
             
             // SyncWithServerState(_view.Rb, ourState);
-            // SyncWithServerState(_rewindRb, ourState);
-// Set the state of _rewindRb to match the server state only once
             SyncWithServerState(_rewindRb, ourState);
 
             // Fixes jittering, im not sure why
@@ -165,15 +158,26 @@ namespace Code.Client
                 RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
             }
             
-            // Destroy the remote objects
+            List<int> toRemove = new List<int>();
+            // Destroy the remote objects that are no longer in the game
             foreach (var rb in remoteRbs)
             {
+                if (_playerManager.GetById((byte)rb.Key) == null)
+                {
+                    toRemove.Add(rb.Key);
+                }
+            }
+            
+            for (int i = 0; i < toRemove.Count; i++)
+            {
+                var rb = remoteRbs[toRemove[i]];
+                remoteRbs.Remove(toRemove[i]);
+                Object.Destroy(rb.gameObject);
             }
             
             
             // Update the view with the result of the rewind
-            
-            if (!Input.GetKey(KeyCode.Space))
+            // if (!Input.GetKey(KeyCode.Space))
             {
                 _view.Rb.MovePosition(_rewindRb.position);
                 _view.Rb.MoveRotation(_rewindRb.rotation);
@@ -181,16 +185,16 @@ namespace Code.Client
                 _view.Rb.angularVelocity = _rewindRb.angularVelocity;
             }
             
-            if ((prevPosition - _rewindRb.position).sqrMagnitude >= 4.0f)
-            {
-                _positionError = Vector2.zero;
-                _rotationError = 0f;
-            }
-            else
-            {
-                _positionError = _rewindRb.position - prevPosition;
-                _rotationError = _rewindRb.rotation - prevRotation;
-            }
+            // if ((prevPosition - _rewindRb.position).sqrMagnitude >= 4.0f)
+            // {
+            //     _positionError = Vector2.zero;
+            //     _rotationError = 0f;
+            // }
+            // else
+            // {
+            //     _positionError = _rewindRb.position - prevPosition;
+            //     _rotationError = _rewindRb.rotation - prevRotation;
+            // }
             
         }
         
@@ -206,10 +210,10 @@ namespace Code.Client
                 serverState.LastProcessedCommand == _lastServerState.LastProcessedCommand)
                 return;
             
-            if (Input.GetKey(KeyCode.P))
-            {
-                return;
-            }
+            // if (Input.GetKey(KeyCode.P))
+            // {
+            //     return;
+            // }
             
             
             // check if received old state
@@ -227,10 +231,10 @@ namespace Code.Client
             _sentPackets = 0;
             _lastServerState = serverState;
             
-            _position = ourState.Position;
-            _velocity = ourState.Velocity;
-            _rotation = ourState.Rotation;
-            _angularVelocity = ourState.AngularVelocity;
+            // _position = ourState.Position;
+            // _velocity = ourState.Velocity;
+            // _rotation = ourState.Rotation;
+            // _angularVelocity = ourState.AngularVelocity;
 
             if (_predictionPlayerStates.Count == 0)
                 return;
@@ -314,10 +318,15 @@ namespace Code.Client
             LastPosition = _view.Rb.position;
             LastRotation = _view.Rb.rotation;
             
-            _positionError *= 0.9f;
-            _rotationError = Quaternion.Slerp(Quaternion.Euler(0f, 0f, _rotationError), Quaternion.identity, 0.1f).eulerAngles.z;
+            _position = _view.Rb.position;
+            _velocity = _view.Rb.velocity;
+            _rotation = _view.Rb.rotation * Mathf.Deg2Rad;
+            _angularVelocity = _view.Rb.angularVelocity;
             
-            _view.UpdateView(_view.Rb.position + _positionError, _view.Rb.rotation + _rotationError);
+            // _positionError *= 0.9f;
+            // _rotationError = Quaternion.Slerp(Quaternion.Euler(0f, 0f, _rotationError), Quaternion.identity, 0.1f).eulerAngles.z;
+            
+            // _view.UpdateView(_view.Rb.position + _positionError, _view.Rb.rotation + _rotationError);
             
             _nextCommand.Id = (ushort)((_nextCommand.Id + 1) % NetworkGeneral.MaxGameSequence);
             _nextCommand.ServerTick = _lastServerState.Tick;

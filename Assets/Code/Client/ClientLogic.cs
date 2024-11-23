@@ -5,6 +5,7 @@ using Code.Shared;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Random = System.Random;
@@ -20,7 +21,7 @@ namespace Code.Client
         [SerializeField] public CameraFollow _camera;
         
         private Action<DisconnectInfo> _onDisconnected;
-        private GamePool<ShootEffect> _shootsPool;
+        private GameObjectPool<ShootEffect> _shootsPool;
         
         private NetManager _netManager;
         private NetDataWriter _writer;
@@ -51,6 +52,8 @@ namespace Code.Client
 
         public GameObject RewindGO;
         
+        private Controls _controls;
+
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -61,7 +64,7 @@ namespace Code.Client
             LogicTimer = new LogicTimerClient(() => {});
             _writer = new NetDataWriter();
             _playerManager = new ClientPlayerManager(this);
-            _shootsPool = new GamePool<ShootEffect>(ShootEffectContructor, 100);
+            _shootsPool = new GameObjectPool<ShootEffect>(ShootEffectContructor, 100);
             _packetProcessor = new NetPacketProcessor();
             _packetProcessor.RegisterNestedType((w, v) => w.Put(v), reader => reader.GetVector2());
             _packetProcessor.RegisterNestedType<PlayerState>();
@@ -81,6 +84,8 @@ namespace Code.Client
             };
             Physics2D.simulationMode = SimulationMode2D.Script;
             _netManager.Start();
+            
+            _controls = new Controls();
         }
 
         private void Start()
@@ -103,6 +108,7 @@ namespace Code.Client
             _playerManager.LogicUpdate();
         }
 
+        
         private void FixedUpdate()
         {
             // Physics2D.Simulate(Time.fixedDeltaTime);
@@ -201,12 +207,14 @@ namespace Code.Client
         {
             Debug.Log("[C] Join accept. Received player id: " + packet.Id);
             _lastServerTick = packet.ServerTick;
-            var clientPlayer = new ClientPlayer(this, _playerManager, _userName, packet.Id);
+            var clientPlayer = new ClientPlayer(this, _playerManager, _userName, packet.Id, _controls);
             clientPlayer.RewindScene = _rewindScene;
             clientPlayer.RewindPhysicsScene = _rewindScene.GetPhysicsScene2D();
             var view = ClientPlayerView.Create(_clientPlayerViewPrefab, clientPlayer);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
+            
+            _controls.Enable();
         }
 
         public void SendPacketSerializable<T>(PacketType type, T packet, DeliveryMethod deliveryMethod) where T : INetSerializable

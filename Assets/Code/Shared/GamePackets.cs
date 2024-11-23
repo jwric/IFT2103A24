@@ -91,12 +91,13 @@ namespace Code.Shared
             ServerTick = reader.GetUShort();
         }
     }
-    
+
     public struct PlayerInputPacket : INetSerializable
     {
         public ushort Id;
         public MovementKeys Keys;
-        public float Rotation;
+        public Vector2 Thrust;
+        public float AngularThrust;
         public ushort ServerTick;
         public float Delta;
         public float Time;
@@ -105,7 +106,8 @@ namespace Code.Shared
         {
             writer.Put(Id);
             writer.Put((byte)Keys);
-            writer.Put(Rotation);
+            writer.Put(Thrust);
+            writer.Put(AngularThrust);
             writer.Put(ServerTick);
             writer.Put(Delta);
             writer.Put(Time);
@@ -115,7 +117,8 @@ namespace Code.Shared
         {
             Id = reader.GetUShort();
             Keys = (MovementKeys)reader.GetByte();
-            Rotation = reader.GetFloat();
+            Thrust = reader.GetVector2();
+            AngularThrust = reader.GetFloat();
             ServerTick = reader.GetUShort();
             Delta = reader.GetFloat();
             Time = reader.GetFloat();
@@ -156,6 +159,36 @@ namespace Code.Shared
             Time = reader.GetFloat();
         }
     }
+    
+    public struct PhysicsEntityState : INetSerializable
+    {
+        public byte Id;
+        public Vector2 Position;
+        public Vector2 Velocity;
+        public float Rotation;
+        public float AngularVelocity;
+        public ushort Tick;
+
+        public const int Size = sizeof(float)*6 + sizeof(ushort);
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Position);
+            writer.Put(Velocity);
+            writer.Put(Rotation);
+            writer.Put(AngularVelocity);
+            writer.Put(Tick);
+        }
+
+        public void Deserialize(NetDataReader reader)
+        {
+            Position = reader.GetVector2();
+            Velocity = reader.GetVector2();
+            Rotation = reader.GetFloat();
+            AngularVelocity = reader.GetFloat();
+            Tick = reader.GetUShort();
+        }
+    }
 
     public struct ServerState : INetSerializable
     {
@@ -166,6 +199,9 @@ namespace Code.Shared
         public int StartState; //server only
         public PlayerState[] PlayerStates;
         
+        public int PhysicsEntityStatesCount;
+        public PhysicsEntityState[] PhysicsEntityStates;
+        
         //tick
         public const int HeaderSize = sizeof(ushort)*2;
         
@@ -174,8 +210,13 @@ namespace Code.Shared
             writer.Put(Tick);
             writer.Put(LastProcessedCommand);
             
+            writer.Put(PlayerStatesCount);
             for (int i = 0; i < PlayerStatesCount; i++)
                 PlayerStates[StartState + i].Serialize(writer);
+            
+            writer.Put(PhysicsEntityStatesCount);
+            for (int i = 0; i < PhysicsEntityStatesCount; i++)
+                PhysicsEntityStates[i].Serialize(writer);
         }
 
         public void Deserialize(NetDataReader reader)
@@ -183,11 +224,15 @@ namespace Code.Shared
             Tick = reader.GetUShort();
             LastProcessedCommand = reader.GetUShort();
             
-            PlayerStatesCount = reader.AvailableBytes / PlayerState.Size;
+            PlayerStatesCount = reader.GetInt();
             if (PlayerStates == null || PlayerStates.Length < PlayerStatesCount)
                 PlayerStates = new PlayerState[PlayerStatesCount];
             for (int i = 0; i < PlayerStatesCount; i++)
                 PlayerStates[i].Deserialize(reader);
+            
+            PhysicsEntityStatesCount = reader.GetInt();
+            if (PhysicsEntityStates == null || PhysicsEntityStates.Length < PhysicsEntityStatesCount)
+                PhysicsEntityStates = new PhysicsEntityState[PhysicsEntityStatesCount];
         }
     }
 }

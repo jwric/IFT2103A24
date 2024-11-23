@@ -86,8 +86,8 @@ namespace Code.Server
             // Check if the tick time exceeds the fixed delta
             if (_tickTime > maxTime)
             {
-                Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
-                _numExceeding++;
+                // Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
+                // _numExceeding++;
                 // return;
             }
             
@@ -105,20 +105,21 @@ namespace Code.Server
 
             // Apply the input command
             {
-                Vector2 velocity = Vector2.zero;
+                // Vector2 velocity = Vector2.zero;
 
-                if ((command.Keys & MovementKeys.Up) != 0)
-                    velocity.y = -1f;
-                if ((command.Keys & MovementKeys.Down) != 0)
-                    velocity.y = 1f;
-
-                if ((command.Keys & MovementKeys.Left) != 0)
-                    velocity.x = -1f;
-                if ((command.Keys & MovementKeys.Right) != 0)
-                    velocity.x = 1f;
+                // if ((command.Keys & MovementKeys.Up) != 0)
+                //     velocity.y = -1f;
+                // if ((command.Keys & MovementKeys.Down) != 0)
+                //     velocity.y = 1f;
+                //
+                // if ((command.Keys & MovementKeys.Left) != 0)
+                //     velocity.x = -1f;
+                // if ((command.Keys & MovementKeys.Right) != 0)
+                //     velocity.x = 1f;
 
                 // _position += velocity.normalized * (base._speed * delta);
-                _playerView.Move(velocity.normalized * _speed);
+                _playerView.Move(command.Thrust * _speed);
+                _playerView.Rotate(command.AngularThrust * _angularSpeed);
                 // _playerView.SetRotation(command.Rotation);
 
 

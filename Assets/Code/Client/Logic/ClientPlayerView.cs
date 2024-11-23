@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-namespace Code.Client
+namespace Code.Client.Logic
 {
     [RequireComponent(typeof(Rigidbody2D)), RequireComponent(typeof(Collider2D))]
     public class ClientPlayerView : MonoBehaviour, IPlayerView
@@ -47,26 +47,51 @@ namespace Code.Client
         {
             _rb.AddForce(amount, ForceMode2D.Force);
         }
+
+        // takes in the absolute rotation difference
+        public float AbsoluteRotationDiff(float r1, float r2)
+        {
+            float diff = Mathf.Abs(r1 - r2);
+            if (diff > Mathf.PI)
+                diff = Mathf.PI * 2f - diff;
+            return diff;
+        } 
+        
+        public static float GetAngleDifference(float angle1, float angle2)
+        {
+            float difference = angle2 - angle1;
+
+            difference = (difference + 180) % 360;
+            if (difference < 0)
+            {
+                difference += 360;
+            }
+            return difference - 180;
+        }
+
         
         private void Update()
         {
             var vert = Input.GetAxis("Vertical");
-            var rot = Input.GetAxis("Horizontal");
-            var horz = Input.GetKey(KeyCode.Q) ? -1f : Input.GetKey(KeyCode.E) ? 1f : 0f;
+            var horz = Input.GetAxis("Horizontal");
             var fire = Input.GetAxis("Fire1");
             
             Vector2 velocty = new Vector2(horz, vert);
 
-            // Vector2 mousePos = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
-            // Vector2 dir = mousePos - _rb.position;
-            // float rotation = Mathf.Atan2(dir.y, dir.x);
+            Vector2 mousePos = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 dir = mousePos - _rb.position;
+            float rotation = Mathf.Atan2(dir.y, dir.x);
             
-            float rotationVelocty = horz;
-            _player.SetInput(velocty, rot, fire > 0f);
+            // correct the rotation to not accidentally loop around
+            
+            float rotationDiff = GetAngleDifference(_rb.rotation, rotation * Mathf.Rad2Deg);
+            
+            rotationDiff = Mathf.Clamp(rotationDiff, -1f, 1f);
+            _player.SetInput(velocty, rotationDiff, fire > 0f);
 
             // float lerpT = ClientLogic.LogicTimer.LerpAlpha;
-            // transform.position = Vector2.Lerp(_player.LastPosition, _player.Position, lerpT);
-
+            // // transform.position = Vector2.Lerp(_player.LastPosition, _player.Position, lerpT);
+            //
             // float lastAngle = _player.LastRotation;
             // if (Mathf.Abs(lastAngle - _player.Rotation) > Mathf.PI)
             // {
@@ -75,7 +100,7 @@ namespace Code.Client
             //     else
             //         lastAngle -= Mathf.PI * 2f;
             // }
-            
+            //
             // float angle = Mathf.Lerp(lastAngle, _player.Rotation, lerpT);
             // _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
         }

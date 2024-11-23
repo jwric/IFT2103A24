@@ -1,7 +1,7 @@
 using Code.Shared;
 using UnityEngine;
 
-namespace Code.Client
+namespace Code.Client.Logic
 {
     public class RemotePlayer : BasePlayer
     {
