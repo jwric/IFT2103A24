@@ -276,6 +276,9 @@ namespace Code.Client.Logic
 
         public override void Spawn(Vector2 position)
         {
+            _predictionPlayerStates.FastClear();
+            _clientPlayerStates.FastClear();
+            _view.Spawn(position,0f);
             base.Spawn(position);
         }
 
@@ -383,5 +386,11 @@ namespace Code.Client.Logic
                 }
             }
         }
+        
+        public void Die()
+        {
+            _view.Die();
+        }
+        
     }
 }

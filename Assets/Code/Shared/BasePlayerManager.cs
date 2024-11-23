@@ -34,6 +34,7 @@ namespace Code.Shared
         }
 
         public abstract void LogicUpdate();
-        public abstract void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit);
+        public abstract void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage);
+        public abstract void OnPlayerDeath(BasePlayer player, BasePlayer killer);
     }
 }

@@ -31,6 +31,7 @@ namespace Code.Client.Managers
         public event Action<JoinAcceptPacket> OnJoinAccept;
         public event Action<PlayerLeavedPacket> OnPlayerLeaved;
         public event Action<ShootPacket> OnShoot;
+        public event Action<PlayerDeathPacket> OnPlayerDeath;
         
         public int Ping { get; private set; }
         
@@ -204,6 +205,11 @@ namespace Code.Client.Managers
                     ShootPacket shootPacket = new ShootPacket();
                     shootPacket.Deserialize(reader);
                     OnShoot?.Invoke(shootPacket);
+                    break;
+                case PacketType.PlayerDeath:
+                    PlayerDeathPacket deathPacket = new PlayerDeathPacket();
+                    deathPacket.Deserialize(reader);
+                    OnPlayerDeath?.Invoke(deathPacket);
                     break;
                 default:
                     Debug.Log("Unhandled packet: " + pt);

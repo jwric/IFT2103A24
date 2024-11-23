@@ -101,6 +101,11 @@ namespace Code.Client.GameStates
                 // show game HUD
                 GameManager.UIManager.ShowGameHUD();
                 
+
+                
+
+                var hudController = GameManager.UIManager.GameHUDController;
+
                 // sub to disconnect event
                 GameManager.NetworkManager.OnDisconnect += OnDisconnect;
                 
@@ -109,9 +114,22 @@ namespace Code.Client.GameStates
                 var remotePlayerViewPrefab = GameManager.RemotePlayerViewPrefab;
                 var ShootPrefab = GameManager.ShootEffectPrefab;
                 var RewindPrefab = GameManager.RewindGO;
-                var camera = Camera.main?.GetComponent<CameraFollow>();
+                var camera = GameManager.Camera;
                 _clientLogic = new Logic.ClientLogic();
-                _clientLogic.Init(camera, playerViewPrefab, remotePlayerViewPrefab, ShootPrefab, RewindPrefab);
+                _clientLogic.Init(camera, playerViewPrefab, remotePlayerViewPrefab, ShootPrefab, RewindPrefab, hudController);
+                
+                // sub to death screen events
+                hudController.OnRespawn = () =>
+                {
+                    _clientLogic.Destroy();
+                    _clientLogic.Init(camera, playerViewPrefab, remotePlayerViewPrefab, ShootPrefab, RewindPrefab, hudController);
+                    
+                };
+                
+                hudController.OnMainMenu = () =>
+                {
+                    GameManager.ChangeState<MainMenuState>();
+                };
             }
             else
             {
@@ -130,6 +148,11 @@ namespace Code.Client.GameStates
             pauseMenu.OnResume = null;
             pauseMenu.OnQuit = null;
             pauseMenu.OnMainMenu = null;
+            
+            // unregister death screen events
+            var hudController = GameManager.UIManager.GameHUDController;
+            hudController.OnRespawn = null;
+            hudController.OnMainMenu = null;
             
             // unsubscribe from disconnect event
             GameManager.NetworkManager.OnDisconnect -= OnDisconnect;

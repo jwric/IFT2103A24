@@ -38,6 +38,18 @@ namespace Code.Server
 
 
         private bool test = false;
+
+        public override void Spawn(Vector2 position)
+        {
+            base.Spawn(position);
+            _playerView.Spawn(position);
+        }
+        
+        public void Die()
+        {
+            _playerView.Die();
+        }
+
         // Applies player input if it's newer than the last processed command
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {

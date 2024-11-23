@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Code.Server
 {
     [RequireComponent(typeof(Rigidbody2D)), RequireComponent(typeof(Collider2D))]
-    public class ServerPlayerView : MonoBehaviour, IPlayerView
+    public class ServerPlayerView : MonoBehaviour
     {
         private ServerPlayer _player;
         private Rigidbody2D _rb;
@@ -22,6 +22,17 @@ namespace Code.Server
             var obj = Instantiate(prefab, player.Position, rot);
             obj._player = player;
             return obj;
+        }
+        
+        public void Spawn(Vector2 position)
+        {
+            _rb.position = position;
+            enabled = true;
+        }
+        
+        public void Die()
+        {
+            enabled = false;
         }
 
         public void Move(Vector2 amount)

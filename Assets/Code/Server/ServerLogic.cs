@@ -29,13 +29,13 @@ namespace Code.Server
         private ServerState _serverState;
         public ushort Tick => _serverTick;
 
-        public void StartServer(int port)
+        public void StartServer(IPAddress address, int port)
         {
             Physics2D.simulationMode = SimulationMode2D.Script;
 
             if (_netManager.IsRunning)
                 return;
-            _netManager.Start(port);
+            _netManager.Start(address, IPAddress.IPv6Any, port);
             _logicTimer.Start();
         }
 
@@ -169,17 +169,22 @@ namespace Code.Server
                 ServerTick = _serverTick
             };
             _netManager.SendToAll(WritePacket(pj), DeliveryMethod.ReliableOrdered, peer);
-
+            
             //Send to new player info about old players
             pj.NewPlayer = false;
-            foreach(ServerPlayer otherPlayer in _playerManager)
+            foreach(var basePlayer in _playerManager)
             {
+                var otherPlayer = (ServerPlayer)basePlayer;
                 if(otherPlayer == player)
                     continue;
                 pj.UserName = otherPlayer.Name;
                 pj.InitialPlayerState = otherPlayer.NetworkState;
                 peer.Send(WritePacket(pj), DeliveryMethod.ReliableOrdered);
             }
+            
+            // Send spawn packet
+            var sp = new SpawnPacket { PlayerId = player.Id, Position = player.Position };
+            _netManager.SendToAll(WriteSerializable(PacketType.Spawn, sp), DeliveryMethod.ReliableOrdered);
         }
 
         private void OnInputReceived(NetPacketReader reader, NetPeer peer)
@@ -189,6 +194,9 @@ namespace Code.Server
             _cachedCommand.Deserialize(reader);
             var player = (ServerPlayer) peer.Tag;
 
+            if (!player.IsAlive)
+                return;
+            
             if (NetworkGeneral.SeqDiff(_serverTick, _cachedCommand.ServerTick) < 0)
             {
                 Debug.LogWarning($"Player {player.Id} sent a command from the future: {_cachedCommand.ServerTick} vs actual {_serverTick}");
@@ -206,6 +214,12 @@ namespace Code.Server
             _netManager.SendToAll(WriteSerializable(PacketType.Shoot, sp), DeliveryMethod.ReliableUnordered);
         }
 
+        public void SendPlayerDeath(byte playerId, byte killerId)
+        {
+            var pd = new PlayerDeathPacket { Id = playerId, KilledBy = killerId, ServerTick = _serverTick };
+            _netManager.SendToAll(WriteSerializable(PacketType.PlayerDeath, pd), DeliveryMethod.ReliableOrdered);
+        }
+        
         void INetEventListener.OnPeerConnected(NetPeer peer)
         {
             Debug.Log("[S] Player connected: " + peer);

@@ -20,6 +20,8 @@ namespace Code.Client.Logic
             _buffer.Add(pjPacket.InitialPlayerState);
         }
         
+        public Transform Transform => _view.transform;
+        
         public void SetPlayerView(RemotePlayerView view)
         {
             _view = view;
@@ -28,6 +30,7 @@ namespace Code.Client.Logic
         public override void Spawn(Vector2 position)
         {
             _buffer.FastClear();
+            _view.Spawn(position, 0f);
             base.Spawn(position);
         }
 
@@ -136,7 +139,11 @@ namespace Code.Client.Logic
             _buffer.Add(state);
         }
 
-
+        public void Die()
+        {
+            _view.Die();
+        }
+        
         public string GetDebugInfo()
         {
             return $"\n---- Player {Id} ----" +
@@ -145,5 +152,6 @@ namespace Code.Client.Logic
                    $"\nInterpolation Timer: {_interpolationTimer}" +
                    $"\nTarget Buffer Time: {TargetBufferTime}";
         }
+        
     }
 }

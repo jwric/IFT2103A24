@@ -62,10 +62,14 @@ namespace Code.Client
             }
         }
 
-        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit)
+        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
         {
             if(from == _clientPlayer)
                 _clientLogic.SpawnShoot(from.Position, to);
+        }
+
+        public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)
+        {
         }
 
         public BasePlayer GetById(byte id)

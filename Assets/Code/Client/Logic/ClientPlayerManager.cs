@@ -62,10 +62,27 @@ namespace Code.Client.Logic
             }
         }
 
-        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit)
+        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
         {
             if(from == _clientPlayer)
                 _clientLogic.SpawnShoot(from.Position, to);
+        }
+
+        public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)
+        {
+            if (player == _clientPlayer)
+            {
+                var cp = (ClientPlayer)player;
+                cp.Die();
+                _clientLogic.ShowDeathScreen(killer);
+                Debug.Log($"[C] You died. Killer: {killer?.Name}");
+            }
+            else
+            {
+                var rp = (RemotePlayer)player;
+                rp.Die();
+                Debug.Log($"[C] Player {player.Name} died. Killer: {killer?.Name}");
+            }
         }
 
         public BasePlayer GetById(byte id)

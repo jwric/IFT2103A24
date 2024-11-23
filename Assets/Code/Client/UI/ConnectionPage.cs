@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Code.Client.GameStates;
 using Code.Client.Managers;
+using LiteNetLib;
 using TMPro;
 using UnityEngine;
 
@@ -19,9 +20,9 @@ namespace Code.Client.UI
             base.OnAwake();
             
             // default ip
-            _ipInputField.text = IPAddress.Loopback.ToString();
+            _ipInputField.text = NetUtils.GetLocalIp(LocalAddrType.IPv4);
             // default port
-            _portInputField.text = 7777.ToString();
+            _portInputField.text = "10515";
         }
 
         public void OnStartGameButtonClicked()

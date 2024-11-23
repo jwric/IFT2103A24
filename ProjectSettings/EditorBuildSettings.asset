@@ -6,11 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Launch.unity
+    guid: 042f5aad52690aa45984208c8f9cb044
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 0ded2f7f4591ec7439b78ecd3eeabd99
   - enabled: 1
     path: Assets/Scenes/RewindScene.unity
     guid: 50b14d8614decf6428d3752e2b5a460f
+  - enabled: 1
+    path: Assets/Scenes/ClientScene.unity
+    guid: 54846cbe049db2b499ed1bd39b0cd5bc
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: c71ac6e3033c0db419cf1144678d97d6,
       type: 2}

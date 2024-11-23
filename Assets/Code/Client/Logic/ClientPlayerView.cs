@@ -75,37 +75,42 @@ namespace Code.Client.Logic
             var vert = Input.GetAxis("Vertical");
             var horz = Input.GetAxis("Horizontal");
             var fire = Input.GetAxis("Fire1");
-            
-            Vector2 velocty = new Vector2(horz, vert);
+
+            Vector2 velocity = new Vector2(horz, vert);
 
             Vector2 mousePos = _mainCamera.ScreenToWorldPoint(Input.mousePosition);
             Vector2 dir = mousePos - _rb.position;
-            float rotation = Mathf.Atan2(dir.y, dir.x);
-            
-            // correct the rotation to not accidentally loop around
-            
-            float rotationDiff = GetAngleDifference(_rb.rotation, rotation * Mathf.Rad2Deg);
-            
-            rotationDiff = Mathf.Clamp(rotationDiff, -1f, 1f);
-            _player.SetInput(velocty, rotationDiff, fire > 0f);
+            float targetRotation = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
 
-            // float lerpT = ClientLogic.LogicTimer.LerpAlpha;
-            // // transform.position = Vector2.Lerp(_player.LastPosition, _player.Position, lerpT);
-            //
-            // float lastAngle = _player.LastRotation;
-            // if (Mathf.Abs(lastAngle - _player.Rotation) > Mathf.PI)
-            // {
-            //     if (lastAngle < _player.Rotation)
-            //         lastAngle += Mathf.PI * 2f;
-            //     else
-            //         lastAngle -= Mathf.PI * 2f;
-            // }
-            //
-            // float angle = Mathf.Lerp(lastAngle, _player.Rotation, lerpT);
-            // _rb.MoveRotation(_player.Rotation * Mathf.Rad2Deg);
+            // Calculate the angle difference
+            float rotationDiff = GetAngleDifference(_rb.rotation, targetRotation);
+
+            // Proportional and Derivative Control
+            float angularVelocity = _rb.angularVelocity;
+            float kP = 0.5f;
+            float kD = 0.1f;
+
+            float torque = (kP * rotationDiff) - (kD * angularVelocity);
+
+            // Clamp the torque input to [-1, 1]
+            torque = Mathf.Clamp(torque, -1f, 1f);
+
+            _player.SetInput(velocity, torque, fire > 0f);
         }
-        
-        
+
+
+        public void Spawn(Vector2 position, float rotation)
+        {
+            _rb.position = position;
+            _rb.rotation = rotation;
+            enabled = true;
+        }
+
+        public void Die()
+        {
+            enabled = false;            
+        }
+
         public void Destroy()
         {
             Destroy(gameObject);

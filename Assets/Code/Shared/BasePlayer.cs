@@ -9,6 +9,7 @@ namespace Code.Shared
         protected float _speed = 7f;
         protected float _angularSpeed = 0.5f;
         protected GameTimer _shootTimer = new GameTimer(0.2f);
+        protected byte Damage = 10;
         private BasePlayerManager _playerManager;
         
         protected Vector2 _position;
@@ -47,7 +48,14 @@ namespace Code.Shared
             Vector2 dir = new Vector2(Mathf.Cos(_rotation), Mathf.Sin(_rotation));
             var player = _playerManager.CastToPlayer(_position, dir, MaxLength, this);
             Vector2 target = _position + dir * (player != null ? Vector2.Distance(_position, player._position) : MaxLength);
-            _playerManager.OnShoot(this, target, player);
+            _playerManager.OnShoot(this, target, player, Damage);
+        }
+        
+        public void OnHit(byte damage, BasePlayer damager)
+        {
+            _health -= damage;
+            if (_health <= 0)
+                _playerManager.OnPlayerDeath(this, damager);
         }
 
         public abstract void ApplyInput(PlayerInputPacket command, float delta);

@@ -1,5 +1,6 @@
 ﻿using System;
 using Code.Client.Managers;
+using Code.Client.UI;
 using Code.Shared;
 using LiteNetLib;
 using LiteNetLib.Utils;
@@ -34,6 +35,8 @@ namespace Code.Client.Logic
         private RemotePlayerView _remotePlayerViewPrefab;
         private ShootEffect _shootEffectPrefab;
         public GameObject RewindGO;
+
+        private GameHUDController _gameHUD;
         
         private ShootEffect ShootEffectContructor()
         {
@@ -51,13 +54,15 @@ namespace Code.Client.Logic
             _shootsPool = new GameObjectPool<ShootEffect>(ShootEffectContructor, 100);
         }
         
-        public void Init(CameraFollow camera, ClientPlayerView clientPlayerViewPrefab, RemotePlayerView remotePlayerViewPrefab, ShootEffect shootEffectPrefab, GameObject rewindGO)
+        public void Init(CameraFollow camera, ClientPlayerView clientPlayerViewPrefab, RemotePlayerView remotePlayerViewPrefab, ShootEffect shootEffectPrefab, GameObject rewindGO, GameHUDController gameHUD)
         {
             _camera = camera;
             _clientPlayerViewPrefab = clientPlayerViewPrefab;
             _remotePlayerViewPrefab = remotePlayerViewPrefab;
             _shootEffectPrefab = shootEffectPrefab;
             RewindGO = rewindGO;
+            
+            _gameHUD = gameHUD;
             
             Random r = new Random();
 
@@ -81,6 +86,8 @@ namespace Code.Client.Logic
             networkManager.OnJoinAccept += OnJoinAccept;
             networkManager.OnPlayerLeaved += OnPlayerLeaved;
             networkManager.OnShoot += OnShoot;
+            networkManager.OnPlayerDeath += OnPlayerDeath;
+            networkManager.OnSpawn += OnSpawn;
             
             // send join request
             SendJoinRequest();
@@ -135,6 +142,31 @@ namespace Code.Client.Logic
                 return;
             SpawnShoot(p.Position, _cachedShootPacket.Hit);
         }
+        
+        private void OnPlayerDeath(PlayerDeathPacket packet)
+        {
+            var player = _playerManager.GetById(packet.Id);
+            var killer = _playerManager.GetById(packet.KilledBy);
+            if (player == null)
+                return;
+
+            if (player == _playerManager.OurPlayer)
+            {
+                var serverPlayerKiller = killer as RemotePlayer;
+                _camera.target = serverPlayerKiller?.Transform;
+            }
+            
+            _playerManager.OnPlayerDeath(player, killer);
+            _playerManager.RemovePlayer(packet.Id);
+        }
+        
+        private void OnSpawn(SpawnPacket packet)
+        {
+            var player = _playerManager.GetById(packet.PlayerId);
+            if (player == null)
+                return;
+            player.Spawn(packet.Position);
+        }
 
         public void SpawnShoot(Vector2 from, Vector2 to)
         {
@@ -157,7 +189,7 @@ namespace Code.Client.Logic
             clientPlayer.RewindScene = _rewindScene;
             clientPlayer.RewindPhysicsScene = _rewindScene.GetPhysicsScene2D();
             var view = ClientPlayerView.Create(_clientPlayerViewPrefab, clientPlayer);
-            // _camera.target = view.transform;
+            _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
         }
         
@@ -173,6 +205,11 @@ namespace Code.Client.Logic
             networkManager.SendPacket(packet, deliveryMethod);
         }
 
+        public void ShowDeathScreen(BasePlayer killer)
+        {
+            _gameHUD.ShowDeathScreen($"Killed by {killer.Name}");
+        }
+        
         public void Destroy()
         {
             _shootsPool.Dispose();
@@ -189,6 +226,8 @@ namespace Code.Client.Logic
             networkManager.OnJoinAccept -= OnJoinAccept;
             networkManager.OnPlayerLeaved -= OnPlayerLeaved;
             networkManager.OnShoot -= OnShoot;
+            networkManager.OnPlayerDeath -= OnPlayerDeath;
+            networkManager.OnSpawn -= OnSpawn;
         }
     }
 }

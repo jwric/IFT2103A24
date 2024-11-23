@@ -45,6 +45,18 @@ namespace Code.Client.Logic
             _rb.angularVelocity = _player.AngularVelocity;
         }
 
+        public void Spawn(Vector2 position, float rotation)
+        {
+            _rb.position = position;
+            _rb.rotation = rotation * Mathf.Rad2Deg;
+            enabled = true;   
+        }
+
+        public void Die()
+        {
+            enabled = false;
+        }
+
         public void Destroy()
         {
             Destroy(gameObject);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Code.Client.GameStates;
 using Code.Client.UI;
+using Code.Server;
 using UnityEngine;
 
 namespace Code.Client.Managers
@@ -35,6 +36,10 @@ namespace Code.Client.Managers
         public Logic.RemotePlayerView RemotePlayerViewPrefab;
         public Logic.ShootEffect ShootEffectPrefab;
         public GameObject RewindGO;
+        public CameraFollow Camera;
+
+        [SerializeField]
+        private ServerLogic _serverLogic;
 
         private void Awake()
         {

@@ -9,7 +9,7 @@ namespace Code.Server
     public class PlayerHandler
     {
         public readonly ServerPlayer Player;
-        public readonly IPlayerView View;
+        public readonly ServerPlayerView View;
 
         public PlayerHandler(ServerPlayer player, ServerPlayerView view)
         {
@@ -64,7 +64,7 @@ namespace Code.Server
             }
         }
         
-        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit)
+        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
         {
             var serverPlayer = (ServerPlayer) from;
             ShootPacket sp = new ShootPacket
@@ -75,6 +75,20 @@ namespace Code.Server
                 Hit = to
             };
             _serverLogic.SendShoot(ref sp);
+            
+            if (hit != null)
+            {
+                var serverHit = hit;
+                serverHit.OnHit(damage, from);
+            }
+        }
+
+        public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)
+        {
+            var serverPlayer = (ServerPlayer) player;
+            _serverLogic.SendPlayerDeath(serverPlayer.Id, killer?.Id ?? 0);
+            serverPlayer.Die();
+            RemovePlayer(serverPlayer.Id);
         }
 
         public void AddPlayer(ServerPlayer player, ServerPlayerView view)

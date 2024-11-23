@@ -10,7 +10,8 @@ namespace Code.Shared
         Spawn,
         ServerState,
         Serialized,
-        Shoot
+        Shoot,
+        PlayerDeath,
     }
     
     //Auto serializable packets
@@ -42,7 +43,7 @@ namespace Code.Shared
     //Manual serializable packets
     public struct SpawnPacket : INetSerializable
     {
-        public long PlayerId;
+        public byte PlayerId;
         public Vector2 Position;
         
         public void Serialize(NetDataWriter writer)
@@ -53,7 +54,7 @@ namespace Code.Shared
 
         public void Deserialize(NetDataReader reader)
         {
-            PlayerId = reader.GetLong();
+            PlayerId = reader.GetByte();
             Position = reader.GetVector2();
         }
     }
@@ -88,6 +89,27 @@ namespace Code.Shared
             FromPlayer = reader.GetByte();
             CommandId = reader.GetUShort();
             Hit = reader.GetVector2();
+            ServerTick = reader.GetUShort();
+        }
+    }
+    
+    public struct PlayerDeathPacket : INetSerializable
+    {
+        public byte Id;
+        public byte KilledBy;
+        public ushort ServerTick;
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Id);
+            writer.Put(KilledBy);
+            writer.Put(ServerTick);
+        }
+
+        public void Deserialize(NetDataReader reader)
+        {
+            Id = reader.GetByte();
+            KilledBy = reader.GetByte();
             ServerTick = reader.GetUShort();
         }
     }
