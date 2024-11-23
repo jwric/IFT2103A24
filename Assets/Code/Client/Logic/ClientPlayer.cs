@@ -177,7 +177,7 @@ namespace Code.Client.Logic
             
             
             // Update the view with the result of the rewind
-            // if (!Input.GetKey(KeyCode.Space))
+            if (GameManager.Instance.Settings.ServerReconciliation)
             {
                 _view.Rb.MovePosition(_rewindRb.position);
                 _view.Rb.MoveRotation(_rewindRb.rotation);
@@ -209,6 +209,8 @@ namespace Code.Client.Logic
             if (serverState.Tick == _lastServerState.Tick || 
                 serverState.LastProcessedCommand == _lastServerState.LastProcessedCommand)
                 return;
+            
+            _health = ourState.Health;
             
             // if (Input.GetKey(KeyCode.P))
             // {
@@ -248,6 +250,13 @@ namespace Code.Client.Logic
             {
                 _predictionPlayerStates.RemoveFromStart(diff + 1);
                 _clientPlayerStates.RemoveFromStart(diff + 1);
+                
+                if (!GameManager.Instance.Settings.ClientSidePrediction)
+                {
+                    SyncWithServerState(_view.Rb, ourState);
+                    // remove predictions
+                    return;
+                }
                 
                 Vector2 positionError = ourState.Position - _clientPlayerStates.First.Position;
                 float rotationError = ourState.Rotation - _clientPlayerStates.First.Rotation;
@@ -335,7 +344,12 @@ namespace Code.Client.Logic
             _nextCommand.ServerTick = _lastServerState.Tick;
             _nextCommand.Delta = delta;
             _nextCommand.Time = Time.fixedTime;
-            ApplyInput(_nextCommand, delta);
+
+            if (!GameManager.Instance.Settings.ClientSidePrediction)
+            {
+                ApplyInput(_nextCommand, delta);
+            }
+
             if (_predictionPlayerStates.IsFull)
             {
                 Debug.LogWarning("Input is too fast for server. Prediction buffer is full, clearing.");

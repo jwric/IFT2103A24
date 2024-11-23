@@ -1,3 +1,4 @@
+using Code.Client.Managers;
 using Code.Shared;
 using UnityEngine;
 
@@ -120,6 +121,18 @@ namespace Code.Client.Logic
             {
                 return;
             }
+
+            if (!GameManager.Instance.Settings.EntityInterpolation)
+            {
+                _position = state.Position;
+                _rotation = state.Rotation;
+                _velocity = state.Velocity;
+                _angularVelocity = state.AngularVelocity;
+                return;
+            }
+            
+            _health = state.Health;
+
             
             _bufferTime += timeDiff;
             // Prevent excessive buffering by dynamically adjusting the buffer

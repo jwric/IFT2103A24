@@ -193,6 +193,8 @@ namespace Code.Server
             NetworkState.AngularVelocity = _playerView.AngularVelocity;
             NetworkState.Tick = LastProcessedCommandId;
             NetworkState.Time = Time.time;
+            NetworkState.Health = _health;
+            
             // Debug.Log($"Player {Id} updated to tick {NetworkState.Tick} at {NetworkState.Time}");
             // Draw a cross at the player's position for visual debugging
             DrawDebugCross(Position, 0.1f, test ? Color.green : Color.white);

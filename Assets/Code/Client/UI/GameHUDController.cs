@@ -20,6 +20,10 @@ namespace Code.Client.UI
         private CanvasGroup deathScreen;
         [SerializeField]
         private TextMeshProUGUI deathText;
+        
+        [SerializeField]
+        private TextMeshProUGUI healthText;
+        
 
         private void Awake()
         {
@@ -53,6 +57,12 @@ namespace Code.Client.UI
             deathScreen.alpha = 0;
             deathScreen.interactable = false;
             deathScreen.blocksRaycasts = false;
+        }
+        
+        public void UpdateHealth(int health)
+        {
+            health = Mathf.Max(0, health);
+            healthText.text = $"Health: {health}";
         }
 
         public void OnRespawnButtonClicked()

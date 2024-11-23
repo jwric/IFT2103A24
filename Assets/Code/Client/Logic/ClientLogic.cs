@@ -64,9 +64,7 @@ namespace Code.Client.Logic
             
             _gameHUD = gameHUD;
             
-            Random r = new Random();
-
-            _username = Environment.MachineName + " " + r.Next(100000);
+            _username = GameManager.Instance.Settings.Name;
             
             LoadSceneParameters parameters = new LoadSceneParameters(LoadSceneMode.Additive, LocalPhysicsMode.Physics2D);
             var rewindScene = SceneManager.LoadScene("RewindScene", parameters);
@@ -132,6 +130,8 @@ namespace Code.Client.Logic
                 return;
             _lastServerTick = _cachedServerState.Tick;
             _playerManager.ApplyServerState(ref _cachedServerState);
+            
+            _gameHUD.UpdateHealth(_playerManager.OurPlayer.Health);
         }
 
         private void OnShoot(ShootPacket packet)

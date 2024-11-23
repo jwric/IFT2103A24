@@ -31,6 +31,9 @@ namespace Code.Client.Managers
         [SerializeField]
         private PauseMenuController _pauseMenu;
         
+        // settings
+        public Settings Settings;
+        
         // Prefabs
         public Logic.ClientPlayerView ClientPlayerViewPrefab;
         public Logic.RemotePlayerView RemotePlayerViewPrefab;
@@ -55,6 +58,8 @@ namespace Code.Client.Managers
             UIManager = new UIManager(this, _mainMenu, _loadingScreen, _pauseMenu, _gameHUD);
             NetworkManager = new NetworkManager(this);
             LoadingManager = new LoadingManager(this);
+            
+            Settings = new Settings();
             
             // Initialize states
             _states.Add(typeof(LoadingState), new LoadingState(this));

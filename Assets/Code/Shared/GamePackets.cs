@@ -156,8 +156,9 @@ namespace Code.Shared
         public float AngularVelocity;
         public ushort Tick;
         public float Time;
+        public byte Health;
 
-        public const int Size = sizeof(byte) + sizeof(float)*7 + sizeof(ushort);
+        public const int Size = sizeof(byte) + sizeof(float)*7 + sizeof(ushort) + sizeof(byte);
         
         public void Serialize(NetDataWriter writer)
         {
@@ -168,6 +169,7 @@ namespace Code.Shared
             writer.Put(AngularVelocity);
             writer.Put(Tick);
             writer.Put(Time);
+            writer.Put(Health);
         }
 
         public void Deserialize(NetDataReader reader)
@@ -179,6 +181,7 @@ namespace Code.Shared
             AngularVelocity = reader.GetFloat();
             Tick = reader.GetUShort();
             Time = reader.GetFloat();
+            Health = reader.GetByte();
         }
     }
     

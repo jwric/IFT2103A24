@@ -160,6 +160,7 @@ namespace Code.Client
                 state.Rotation = _rewindRb.rotation * Mathf.Deg2Rad;
                 state.Velocity = _rewindRb.velocity;
                 state.AngularVelocity = _rewindRb.angularVelocity;
+                state.Health = _health;
                 
                 ApplyInputToRigidbody(_rewindRb, input);
                 RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
