@@ -8,10 +8,10 @@ namespace Code.Client.Logic
     {
         private RemotePlayerView _view;
         
-        private readonly LiteRingBuffer<PlayerState> _buffer = new LiteRingBuffer<PlayerState>(30);
-        private float _bufferTime; // Running time in buffer
+        private readonly LiteRingBuffer<PlayerState> _buffer = new(30);
+        private float _bufferTime;
         private float _interpolationTimer;
-        private const float TargetBufferTime = 0.1f; // Target buffer time in seconds (100 ms)
+        private const float TargetBufferTime = 0.1f;
 
         public RemotePlayer(ClientPlayerManager manager, string name, PlayerJoinedPacket pjPacket) : base(manager, name, pjPacket.InitialPlayerState.Id)
         {
@@ -21,7 +21,7 @@ namespace Code.Client.Logic
             _buffer.Add(pjPacket.InitialPlayerState);
         }
         
-        public Transform Transform => _view.transform;
+        public Transform Transform => _view.transform; // TODO: Remove this
         
         public void SetPlayerView(RemotePlayerView view)
         {
@@ -37,15 +37,13 @@ namespace Code.Client.Logic
 
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
-            // No input processing for remote players
+            // Do nothing
         }
 
         public void UpdatePosition(float delta)
         {
-            // Only proceed if we have enough data for interpolation or apply adaptive smoothing
             if (_buffer.Count < 2)
             {
-                // If we only have one state left, use it with adaptive smoothing to avoid choppiness
                 if (_buffer.Count == 1)
                 {
                     var singleData = _buffer[0];
@@ -60,16 +58,13 @@ namespace Code.Client.Logic
             var dataA = _buffer[0];
             var dataB = _buffer[1];
 
-            // Calculate time between the two states
             float stateDeltaTime = dataB.Time - dataA.Time;
             if (stateDeltaTime <= 0) return;
 
-            // Calculate interpolation factor with error correction for lag
             float lerpT = _interpolationTimer / stateDeltaTime;
             _position = Vector2.Lerp(dataA.Position, dataB.Position, lerpT);
             // _position = dataB.Position; // No interpolation for position
 
-            // Smooth rotation interpolation handling wrap-around at 360 degrees
             float startRotation = dataA.Rotation;
             float endRotation = dataB.Rotation;
             if (Mathf.Abs(startRotation - endRotation) > Mathf.PI)
@@ -85,10 +80,8 @@ namespace Code.Client.Logic
             
             _angularVelocity = Mathf.Lerp(dataA.AngularVelocity, dataB.AngularVelocity, lerpT);
 
-            // Update interpolation timer
             _interpolationTimer += delta;
 
-            // Move to the next buffer state when interpolation completes
             if (_interpolationTimer >= stateDeltaTime)
             {
                 _buffer.RemoveFromStart(1);
@@ -96,10 +89,9 @@ namespace Code.Client.Logic
                 _bufferTime -= stateDeltaTime;
             }
             
-            // Adaptive smoothing based on buffer count and buffer time
             if (_buffer.Count < 3 && _bufferTime < TargetBufferTime * 0.5f)
             {
-                _interpolationTimer *= 0.8f; // Reduce interpolation rate to smooth out movement
+                _interpolationTimer *= 0.8f;
             }
         }
 

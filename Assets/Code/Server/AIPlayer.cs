@@ -32,7 +32,7 @@ namespace Code.Server
         private Vector2 _patrolTarget;
         private float _patrolRange = 5f;
         private BasePlayer _targetPlayer;
-        private float _attackRange = 3f;
+        private float _attackRange = 5f;
         private float _stateChangeCooldown = 1f;
         private float _stateChangeTimer = 0f;
         
@@ -54,8 +54,6 @@ namespace Code.Server
         }
 
 
-        private bool test = false;
-
         public override void Spawn(Vector2 position)
         {
             base.Spawn(position);
@@ -70,15 +68,6 @@ namespace Code.Server
         // Applies player input if it's newer than the last processed command
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
-            test = true;
-            // Ensure only new commands are processed
-            // if (NetworkGeneral.SeqDiff(command.Id, LastProcessedCommandId) <= 0)
-            // {
-            //     var gap = NetworkGeneral.SeqDiff(LastProcessedCommandId, command.Id);
-            //     // Debug.Log($"Player {Id} received an old command {command.Id} (last processed {LastProcessedCommandId})");
-            //     Debug.Log($"Gap: {gap}");
-            //     return;
-            // }
 
             if (!_isFirstStateReceived)
             {
@@ -108,21 +97,6 @@ namespace Code.Server
 
             _tickTime += delta;
             TickUpdateCount++;
-            
-            const float MaxAllowedTime = 1/30f;
-            float margin = Mathf.Min(delta, MaxAllowedTime) * 3;
-            float maxTime = LogicTimerServer.FixedDelta * _lastTickDiff + margin;
-            // Check if the tick time exceeds the fixed delta
-            if (_tickTime > maxTime)
-            {
-                // Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
-                // _numExceeding++;
-                // return;
-            }
-            
-            // float timeDiff = command.Time - LastProcessedCommandTime;
-            // Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff}");
-            
             
             // Update last processed command ID and apply the input
             LastProcessedCommandId = command.Id;
@@ -160,25 +134,6 @@ namespace Code.Server
             _lastDamager = damager;
         }
 
-        public BasePlayer GetClosestPlayer()
-        {
-            BasePlayer closest = null;
-            float minDist = float.MaxValue;
-            foreach (var player in _playerManager)
-            {
-                if (player == this)
-                    continue;
-                float dist = Vector2.Distance(Position, player.Position);
-                if (dist < minDist)
-                {
-                    minDist = dist;
-                    closest = player;
-                }
-            }
-
-            return closest;
-        }
-        
         public override void Update(float delta)
         {
             base.Update(delta);
@@ -259,23 +214,17 @@ namespace Code.Server
             Vector2 direction = (_targetPlayer.Position - Position).normalized;
             float distanceToTarget = Vector2.Distance(Position, _targetPlayer.Position);
 
-            // Safe distance where the AI stops moving closer
             float safeDistance = 1.5f;
 
-            // Proportional-Derivative control for thrust
             float thrust = CalculateThrust(distanceToTarget, safeDistance);
-
-            // Angular thrust for aiming
             float angularThrust = CalculateAngularThrust(direction);
 
             MoveTowards(_targetPlayer.Position, delta, angularThrust, thrust);
 
-            // Attack only if within a certain angle and safe distance
             var angleDiff = GetAngleDifference(_rotation * Mathf.Rad2Deg, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (Mathf.Abs(angleDiff) < 10f && distanceToTarget <= _attackRange)
                 SimulateAttack();
 
-            // If the target is out of range, return to Patrol state
             if (distanceToTarget > _attackRange + safeDistance)
             {
                 _currentState = AIState.Patrol;
@@ -368,7 +317,6 @@ namespace Code.Server
             NetworkState.Health = _health;
         }
         
-        // Utility function to draw a cross at the player's position
         private void DrawDebugCross(Vector2 position, float size, Color color)
         {
             Debug.DrawLine(

@@ -109,6 +109,7 @@ namespace Code.Client.Logic
         
         public void FixedUpdate()
         {
+            // simulating before logic update has bugs
             // Physics2D.Simulate(Time.fixedDeltaTime);
             OnLogicUpdate();
             Physics2D.Simulate(Time.fixedDeltaTime);
