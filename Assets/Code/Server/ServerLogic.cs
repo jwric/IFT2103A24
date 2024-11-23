@@ -77,8 +77,37 @@ namespace Code.Server
             await Task.Delay(SimulatedLagMs); // Delay to simulate lag
         }
 
+        private void AddBot(Vector2 position)
+        {
+            var player = new AIPlayer(_playerManager, "Bot " + _playerManager.Count, (byte)_playerManager.Count, _serverTick - 1);
+            var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
+            _playerManager.AddBot(player, playerView);
+            
+            // send player join packet
+            var pj = new PlayerJoinedPacket
+            {
+                UserName = player.Name,
+                NewPlayer = true,
+                InitialPlayerState = player.NetworkState,
+                ServerTick = _serverTick
+            };
+            _netManager.SendToAll(WritePacket(pj), DeliveryMethod.ReliableOrdered);
+            
+            // send spawn packet
+            var sp = new SpawnPacket { PlayerId = player.Id, Position = position };
+            _netManager.SendToAll(WriteSerializable(PacketType.Spawn, sp), DeliveryMethod.ReliableOrdered);
+            
+            player.Spawn(position);
+        }
+        
         private void FixedUpdate()
         {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                AddBot(mousePos);
+            }
+            
             OnLogicUpdate();
         }
 
@@ -97,19 +126,21 @@ namespace Code.Server
                 _serverState.PlayerStates = _playerManager.PlayerStates;
                 int pCount = _playerManager.Count;
                 
-                foreach(ServerPlayer p in _playerManager)
-                { 
-                    int statesMax = p.AssociatedPeer.GetMaxSinglePacketSize(DeliveryMethod.Unreliable) - ServerState.HeaderSize;
+                foreach(var basePlayer in _playerManager)
+                {
+                    if (!(basePlayer is ServerPlayer player))
+                        continue;
+                    int statesMax = player.AssociatedPeer.GetMaxSinglePacketSize(DeliveryMethod.Unreliable) - ServerState.HeaderSize;
                     statesMax /= PlayerState.Size;
                 
                     for (int s = 0; s < (pCount-1)/statesMax + 1; s++)
                     {
                         //TODO: divide
-                        _serverState.LastProcessedCommand = p.LastProcessedCommandId;
+                        _serverState.LastProcessedCommand = player.LastProcessedCommandId;
                         _serverState.PlayerStatesCount = pCount;
                         _serverState.StartState = s * statesMax;
                         // await SimulateLag();
-                        p.AssociatedPeer.Send(WriteSerializable(PacketType.ServerState, _serverState), DeliveryMethod.Unreliable);
+                        player.AssociatedPeer.Send(WriteSerializable(PacketType.ServerState, _serverState), DeliveryMethod.Unreliable);
                     }
                 }
             }
@@ -123,9 +154,12 @@ namespace Code.Server
             // update debug text
             string debugText = $"Server tick: {_serverTick}\n";
             
-            foreach (ServerPlayer p in _playerManager)
+            foreach (var basePlayer in _playerManager)
             {
-                debugText += p.GetDebugInfo();
+                if (basePlayer is ServerPlayer p)
+                {
+                    debugText += p.GetDebugInfo();
+                }
             }
             _debugText.text = debugText;
         }
@@ -174,11 +208,18 @@ namespace Code.Server
             pj.NewPlayer = false;
             foreach(var basePlayer in _playerManager)
             {
-                var otherPlayer = (ServerPlayer)basePlayer;
-                if(otherPlayer == player)
-                    continue;
-                pj.UserName = otherPlayer.Name;
-                pj.InitialPlayerState = otherPlayer.NetworkState;
+                if (basePlayer is ServerPlayer otherPlayer)
+                {
+                    if (otherPlayer == player)
+                        continue;
+                    pj.UserName = otherPlayer.Name;
+                    pj.InitialPlayerState = otherPlayer.NetworkState;
+                }
+                else if (basePlayer is AIPlayer aiPlayer)
+                {
+                    pj.UserName = aiPlayer.Name;
+                    pj.InitialPlayerState = aiPlayer.NetworkState;
+                }
                 peer.Send(WritePacket(pj), DeliveryMethod.ReliableOrdered);
             }
             
@@ -203,10 +244,7 @@ namespace Code.Server
                 return;
             }
             
-            bool antilagApplied = _playerManager.EnableAntilag(player);
             player.ApplyInput(_cachedCommand, _cachedCommand.Delta);
-            if(antilagApplied)
-                _playerManager.DisableAntilag();
         }
 
         public void SendShoot(ref ShootPacket sp)
@@ -289,9 +327,12 @@ namespace Code.Server
         {
             if (_playerManager == null)
                 return;
-            foreach (ServerPlayer p in _playerManager)
+            foreach (var basePlayer in _playerManager)
             {
-                p.DrawGizmos();
+                if (basePlayer is ServerPlayer sp)
+                    sp.DrawGizmos();
+                if (basePlayer is AIPlayer aiPlayer)
+                    aiPlayer.DrawGizmos();
             }
         }
     }

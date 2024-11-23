@@ -50,16 +50,14 @@ namespace Code.Server
             _playerView.Die();
         }
 
-        // Applies player input if it's newer than the last processed command
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
             test = true;
             // Ensure only new commands are processed
             if (NetworkGeneral.SeqDiff(command.Id, LastProcessedCommandId) <= 0)
             {
-                var gap = NetworkGeneral.SeqDiff(LastProcessedCommandId, command.Id);
+                // var gap = NetworkGeneral.SeqDiff(LastProcessedCommandId, command.Id);
                 // Debug.Log($"Player {Id} received an old command {command.Id} (last processed {LastProcessedCommandId})");
-                Debug.Log($"Gap: {gap}");
                 return;
             }
 
@@ -80,8 +78,6 @@ namespace Code.Server
                 // New tick, reset tick time
                 if (tickDiff > 0)
                 {
-                    // Debug.Log($"Num exceeding: {_numExceeding} (total {TickUpdateCount} updates)");
-                    // New tick, reset tick time
                     _tickTime = 0f;
                     TickUpdateCount = 0;
                     _lastTickDiff = (ushort)tickDiff;
@@ -95,17 +91,6 @@ namespace Code.Server
             const float MaxAllowedTime = 1/30f;
             float margin = Mathf.Min(delta, MaxAllowedTime) * 3;
             float maxTime = LogicTimerServer.FixedDelta * _lastTickDiff + margin;
-            // Check if the tick time exceeds the fixed delta
-            if (_tickTime > maxTime)
-            {
-                // Debug.LogWarning($"Player {Id} tick time exceeded: {_tickTime} (max {LogicTimerServer.FixedDelta*_lastTickDiff} ({_lastTickDiff} tick updates)), after {TickUpdateCount} updates");
-                // _numExceeding++;
-                // return;
-            }
-            
-            // float timeDiff = command.Time - LastProcessedCommandTime;
-            // Debug.Log($"Player {Id} received command {command.Id} with time diff {timeDiff}");
-            
             
             // Update last processed command ID and apply the input
             LastProcessedCommandId = command.Id;
@@ -117,19 +102,6 @@ namespace Code.Server
 
             // Apply the input command
             {
-                // Vector2 velocity = Vector2.zero;
-
-                // if ((command.Keys & MovementKeys.Up) != 0)
-                //     velocity.y = -1f;
-                // if ((command.Keys & MovementKeys.Down) != 0)
-                //     velocity.y = 1f;
-                //
-                // if ((command.Keys & MovementKeys.Left) != 0)
-                //     velocity.x = -1f;
-                // if ((command.Keys & MovementKeys.Right) != 0)
-                //     velocity.x = 1f;
-
-                // _position += velocity.normalized * (base._speed * delta);
                 _playerView.Move(command.Thrust * _speed);
                 _playerView.Rotate(command.AngularThrust * _angularSpeed);
                 // _playerView.SetRotation(command.Rotation);

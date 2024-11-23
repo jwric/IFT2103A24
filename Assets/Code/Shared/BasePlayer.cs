@@ -57,7 +57,11 @@ namespace Code.Shared
             if (_health <= 0)
                 _playerManager.OnPlayerDeath(this, damager);
         }
-
+        
+        public virtual void NotifyHit(byte damage, BasePlayer damager)
+        {
+        }
+        
         public abstract void ApplyInput(PlayerInputPacket command, float delta);
         // {
         //     Vector2 velocity = Vector2.zero;

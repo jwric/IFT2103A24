@@ -1,5 +1,6 @@
 ﻿using System;
 using Code.Client;
+using Code.Shared;
 using UnityEngine;
 
 namespace Code.Server
@@ -7,7 +8,7 @@ namespace Code.Server
     [RequireComponent(typeof(Rigidbody2D)), RequireComponent(typeof(Collider2D))]
     public class ServerPlayerView : MonoBehaviour
     {
-        private ServerPlayer _player;
+        private BasePlayer _player;
         private Rigidbody2D _rb;
         private Collider2D _collider;
         
@@ -16,7 +17,7 @@ namespace Code.Server
         public float Rotation => _rb.rotation * Mathf.Deg2Rad;
         public float AngularVelocity => _rb.angularVelocity;
         
-        public static ServerPlayerView Create(ServerPlayerView prefab, ServerPlayer player)
+        public static ServerPlayerView Create(ServerPlayerView prefab, BasePlayer player)
         {
             Quaternion rot = Quaternion.Euler(0f, player.Rotation, 0f);
             var obj = Instantiate(prefab, player.Position, rot);

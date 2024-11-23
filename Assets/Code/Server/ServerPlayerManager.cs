@@ -8,10 +8,10 @@ namespace Code.Server
 {
     public class PlayerHandler
     {
-        public readonly ServerPlayer Player;
+        public readonly BasePlayer Player;
         public readonly ServerPlayerView View;
 
-        public PlayerHandler(ServerPlayer player, ServerPlayerView view)
+        public PlayerHandler(BasePlayer player, ServerPlayerView view)
         {
             Player = player;
             View = view;
@@ -19,7 +19,14 @@ namespace Code.Server
 
         public void Update(float delta)
         {
-            Player.Update(delta);
+            if (Player is ServerPlayer serverPlayer)
+            {
+                serverPlayer.Update(delta);
+            }
+            else if (Player is AIPlayer aiPlayer)
+            {
+                aiPlayer.Update(delta);
+            }
         }
     }
     
@@ -27,7 +34,6 @@ namespace Code.Server
     {
         private readonly ServerLogic _serverLogic;
         private readonly PlayerHandler[] _players;
-        private readonly AntilagSystem _antilagSystem;
         
         public readonly PlayerState[] PlayerStates;
         private int _playersCount;
@@ -38,20 +44,8 @@ namespace Code.Server
         public ServerPlayerManager(ServerLogic serverLogic)
         {
             _serverLogic = serverLogic;
-            _antilagSystem = new AntilagSystem(60, ServerLogic.MaxPlayers);
             _players = new PlayerHandler[ServerLogic.MaxPlayers];
             PlayerStates = new PlayerState[ServerLogic.MaxPlayers];
-        }
-
-        public bool EnableAntilag(ServerPlayer forPlayer)
-        {
-            // return _antilagSystem.TryApplyAntilag(_players, _serverLogic.Tick, forPlayer.AssociatedPeer.Id);
-            return false;
-        }
-
-        public void DisableAntilag()
-        {
-            // _antilagSystem.RevertAntilag(_players);            
         }
 
         public override IEnumerator<BasePlayer> GetEnumerator()
@@ -66,15 +60,28 @@ namespace Code.Server
         
         public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
         {
-            var serverPlayer = (ServerPlayer) from;
-            ShootPacket sp = new ShootPacket
+            if (from is ServerPlayer serverPlayer)
             {
-                FromPlayer = serverPlayer.Id,
-                CommandId = serverPlayer.LastProcessedCommandId,
-                ServerTick = _serverLogic.Tick,
-                Hit = to
-            };
-            _serverLogic.SendShoot(ref sp);
+                ShootPacket sp = new ShootPacket
+                {
+                    FromPlayer = serverPlayer.Id,
+                    CommandId = serverPlayer.LastProcessedCommandId,
+                    ServerTick = _serverLogic.Tick,
+                    Hit = to
+                };
+                _serverLogic.SendShoot(ref sp);
+            }
+            else if (from is AIPlayer aiPlayer)
+            {
+                ShootPacket sp = new ShootPacket
+                {
+                    FromPlayer = aiPlayer.Id,
+                    CommandId = aiPlayer.LastProcessedCommandId,
+                    ServerTick = _serverLogic.Tick,
+                    Hit = to
+                };
+                _serverLogic.SendShoot(ref sp);
+            }
             
             if (hit != null)
             {
@@ -85,10 +92,16 @@ namespace Code.Server
 
         public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)
         {
-            var serverPlayer = (ServerPlayer) player;
-            _serverLogic.SendPlayerDeath(serverPlayer.Id, killer?.Id ?? 0);
-            serverPlayer.Die();
-            RemovePlayer(serverPlayer.Id);
+            _serverLogic.SendPlayerDeath(player.Id, killer?.Id ?? 0);
+            if (player is ServerPlayer serverPlayer)
+            {
+                serverPlayer.Die();
+            }
+            else if (player is AIPlayer aiPlayer)
+            {
+                aiPlayer.Die();
+            }
+            RemovePlayer(player.Id);
         }
 
         public void AddPlayer(ServerPlayer player, ServerPlayerView view)
@@ -107,6 +120,14 @@ namespace Code.Server
             _players[_playersCount] = ph;
             _playersCount++;
         }
+        
+        public void AddBot(AIPlayer bot, ServerPlayerView view)
+        {
+            PlayerHandler ph = new PlayerHandler(bot, view);
+            bot.SetPlayerView(view);
+            _players[_playersCount] = ph;
+            _playersCount++;
+        }
 
         public override void LogicUpdate()
         {
@@ -114,7 +135,14 @@ namespace Code.Server
             {
                 var p = _players[i];
                 p.Update(LogicTimerServer.FixedDelta);
-                PlayerStates[i] = p.Player.NetworkState;
+                if (p.Player is ServerPlayer serverPlayer)
+                {
+                    PlayerStates[i] = serverPlayer.NetworkState;
+                }
+                else if (p.Player is AIPlayer aiPlayer)
+                {
+                    PlayerStates[i] = aiPlayer.NetworkState;
+                }
             }
         }
 
@@ -133,5 +161,6 @@ namespace Code.Server
             }
             return false;
         }
+        
     }
 }

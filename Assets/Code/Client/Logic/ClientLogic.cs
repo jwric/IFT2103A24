@@ -185,9 +185,11 @@ namespace Code.Client.Logic
         {
             Debug.Log("[C] Join accept. Received player id: " + packet.Id);
             _lastServerTick = packet.ServerTick;
-            var clientPlayer = new ClientPlayer(this, _playerManager, _username, packet.Id);
-            clientPlayer.RewindScene = _rewindScene;
-            clientPlayer.RewindPhysicsScene = _rewindScene.GetPhysicsScene2D();
+            var clientPlayer = new ClientPlayer(this, _playerManager, _username, packet.Id)
+            {
+                RewindScene = _rewindScene,
+                RewindPhysicsScene = _rewindScene.GetPhysicsScene2D()
+            };
             var view = ClientPlayerView.Create(_clientPlayerViewPrefab, clientPlayer);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);

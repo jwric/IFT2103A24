@@ -264,7 +264,7 @@ namespace Code.Client.Logic
                 {
                     RewindAndReapplyPredictions(ourState);
 
-                    Debug.LogWarning($"[C] Position error: {positionError}");
+                    // Debug.LogWarning($"[C] Position error: {positionError}");
                 }
             }
             else if (diff >= _predictionPlayerStates.Count)
@@ -345,7 +345,7 @@ namespace Code.Client.Logic
             _nextCommand.Delta = delta;
             _nextCommand.Time = Time.fixedTime;
 
-            if (!GameManager.Instance.Settings.ClientSidePrediction)
+            if (GameManager.Instance.Settings.ClientSidePrediction)
             {
                 ApplyInput(_nextCommand, delta);
             }
