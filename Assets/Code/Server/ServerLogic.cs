@@ -56,11 +56,11 @@ namespace Code.Server
             _netManager = new NetManager(this)
             {
                 AutoRecycle = true,
-                SimulateLatency = true,
-                SimulationMaxLatency = 25+10,
-                SimulationMinLatency = 25,
-                SimulatePacketLoss = true,
-                SimulationPacketLossChance = 2
+                // SimulateLatency = true,
+                // SimulationMaxLatency = 25+10,
+                // SimulationMinLatency = 25,
+                // SimulatePacketLoss = true,
+                // SimulationPacketLossChance = 2
             };
             
             
@@ -106,6 +106,26 @@ namespace Code.Server
             {
                 var mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                 AddBot(mousePos);
+            }
+            
+            if (Input.GetMouseButton(0))
+            {
+                // apply force effect around mouse position
+                Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                // apply force to all players
+                foreach (var basePlayer in _playerManager)
+                {
+                    if (basePlayer is ServerPlayer player)
+                    {
+                        // the closer the player is to the mouse, the stronger the force
+                        var dir = (player.Position - mousePos).normalized;
+                        var distance = Vector2.Distance(player.Position, mousePos);
+                        var maxDistance = 5f;
+                        var maxForce = 10f;
+                        var force = Mathf.Lerp(maxForce, 0, distance / maxDistance);
+                        player.ApplyForce(dir * force);
+                    }
+                }
             }
             
             OnLogicUpdate();

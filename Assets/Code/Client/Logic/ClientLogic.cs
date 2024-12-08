@@ -24,42 +24,36 @@ namespace Code.Client.Logic
         private ClientPlayerManager _playerManager;
         
         public static LogicTimerClient LogicTimer { get; private set; }
-        private GameObjectPool<ShootEffect> _shootsPool;
+        private ObjectPoolManager _objectPoolManager;
 
         public CameraFollow _camera;
         
         private Scene _rewindScene;
         
         
-        private ClientPlayerView _clientPlayerViewPrefab;
-        private RemotePlayerView _remotePlayerViewPrefab;
-        private ShootEffect _shootEffectPrefab;
+        private PlayerView _playerViewPrefab;
         public GameObject RewindGO;
 
         private GameHUDController _gameHUD;
         
-        private ShootEffect ShootEffectContructor()
-        {
-            var eff = Object.Instantiate(_shootEffectPrefab);
-            eff.Init(e => _shootsPool.Put(e));
-            return eff;
-        }
-        
+
         public ClientLogic()
         {
             LogicTimer = new LogicTimerClient(() => { });
             _cachedServerState = new ServerState();
             _cachedShootPacket = new ShootPacket();
             _playerManager = new ClientPlayerManager(this);
-            _shootsPool = new GameObjectPool<ShootEffect>(ShootEffectContructor, 100);
+            _objectPoolManager = new ObjectPoolManager();
         }
         
-        public void Init(CameraFollow camera, ClientPlayerView clientPlayerViewPrefab, RemotePlayerView remotePlayerViewPrefab, ShootEffect shootEffectPrefab, GameObject rewindGO, GameHUDController gameHUD)
+        public void Init(CameraFollow camera, PlayerView playerViewPrefab, ShootEffect shootEffectPrefab, PooledParticleSystem hitParticles, GameObject rewindGO, GameHUDController gameHUD)
         {
+            // create object pools
+            _objectPoolManager.AddPool("shoot", shootEffectPrefab, 10);
+            _objectPoolManager.AddPool("hit", hitParticles, 50);
+            
             _camera = camera;
-            _clientPlayerViewPrefab = clientPlayerViewPrefab;
-            _remotePlayerViewPrefab = remotePlayerViewPrefab;
-            _shootEffectPrefab = shootEffectPrefab;
+            _playerViewPrefab = playerViewPrefab;
             RewindGO = rewindGO;
             
             _gameHUD = gameHUD;
@@ -105,6 +99,7 @@ namespace Code.Client.Logic
         public void Update()
         {
             LogicTimer.Update();
+            _playerManager.FrameUpdate(Time.deltaTime);
         }
         
         public void FixedUpdate()
@@ -119,7 +114,7 @@ namespace Code.Client.Logic
         {
             Debug.Log($"[C] Player joined: {packet.UserName}");
             var remotePlayer = new RemotePlayer(_playerManager, packet.UserName, packet);
-            var view = RemotePlayerView.Create(_remotePlayerViewPrefab, remotePlayer);
+            var view = PlayerView.Create(_playerViewPrefab, remotePlayer);
             _playerManager.AddPlayer(remotePlayer, view);
         }
 
@@ -131,17 +126,38 @@ namespace Code.Client.Logic
                 return;
             _lastServerTick = _cachedServerState.Tick;
             _playerManager.ApplyServerState(ref _cachedServerState);
-            
-            _gameHUD.UpdateHealth(_playerManager.OurPlayer.Health);
+
+            if (_playerManager.OurPlayer != null)
+            {
+                _gameHUD.UpdateHealth(_playerManager.OurPlayer.Health);
+            }
         }
 
         private void OnShoot(ShootPacket packet)
         {
             _cachedShootPacket = packet;
             var p = _playerManager.GetById(_cachedShootPacket.FromPlayer);
-            if (p == null || p == _playerManager.OurPlayer)
+            if (p != null && p != _playerManager.OurPlayer)
+            {
+                if (p is RemotePlayer rp)
+                {
+                    rp.OnShoot(_cachedShootPacket.Hit);
+                }
+                SpawnShoot(p.Position, _cachedShootPacket.Hit);
+            }
+            
+            if (!_cachedShootPacket.AnyHit)
                 return;
-            SpawnShoot(p.Position, _cachedShootPacket.Hit);
+            
+            var pHit = _playerManager.GetById(_cachedShootPacket.PlayerHit);
+
+            var hitInfo = new HitInfo
+            {
+                Damager = p,
+                Damage = 10,
+                Position = _cachedShootPacket.Hit
+            };
+            pHit.NotifyHit(hitInfo);
         }
         
         private void OnPlayerDeath(PlayerDeathPacket packet)
@@ -171,7 +187,13 @@ namespace Code.Client.Logic
 
         public void SpawnShoot(Vector2 from, Vector2 to)
         {
-            var eff = _shootsPool.Get();
+            var particles = _objectPoolManager.GetObject<PooledParticleSystem>("hit");
+            var effDir = (to - from).normalized;
+            var effPos = from + effDir * 0.5f;
+            var effAngle = Mathf.Atan2(effDir.y, effDir.x) * Mathf.Rad2Deg;
+            particles.Spawn(effPos, effAngle);
+            
+            var eff = _objectPoolManager.GetObject<ShootEffect>("shoot");
             eff.Spawn(from, to);
         }
 
@@ -191,7 +213,7 @@ namespace Code.Client.Logic
                 RewindScene = _rewindScene,
                 RewindPhysicsScene = _rewindScene.GetPhysicsScene2D()
             };
-            var view = ClientPlayerView.Create(_clientPlayerViewPrefab, clientPlayer);
+            var view = PlayerView.Create(_playerViewPrefab, clientPlayer);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
         }
@@ -215,7 +237,7 @@ namespace Code.Client.Logic
         
         public void Destroy()
         {
-            _shootsPool.Dispose();
+            _objectPoolManager.Dispose();
             
             _playerManager.Clear();
             

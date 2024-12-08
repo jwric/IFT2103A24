@@ -129,9 +129,9 @@ namespace Code.Server
             
         }
 
-        public override void NotifyHit(byte damage, BasePlayer damager)
+        public override void NotifyHit(HitInfo hit)
         {
-            _lastDamager = damager;
+            _lastDamager = hit.Damager;
         }
 
         public override void Update(float delta)
@@ -152,7 +152,11 @@ namespace Code.Server
 
             UpdateNetworkState();
         }
-        
+
+        public override void FrameUpdate(float delta)
+        {
+        }
+
         private void HandlePatrolState(float delta)
         {
             float distanceToTarget = Vector2.Distance(Position, _patrolTarget);

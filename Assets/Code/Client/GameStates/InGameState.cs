@@ -110,20 +110,19 @@ namespace Code.Client.GameStates
                 GameManager.NetworkManager.OnDisconnect += OnDisconnect;
                 
                 // todo: this is a horrible way to manage prefabs, but it's a quick patch for now
-                var playerViewPrefab = GameManager.ClientPlayerViewPrefab;
-                var remotePlayerViewPrefab = GameManager.RemotePlayerViewPrefab;
-                var ShootPrefab = GameManager.ShootEffectPrefab;
-                var RewindPrefab = GameManager.RewindGO;
+                var playerViewPrefab = GameManager.PlayerViewPrefab;
+                var shootPrefab = GameManager.ShootEffectPrefab;
+                var rewindPrefab = GameManager.RewindGO;
+                var hitParticles = GameManager.HitParticles;
                 var camera = GameManager.Camera;
                 _clientLogic = new Logic.ClientLogic();
-                _clientLogic.Init(camera, playerViewPrefab, remotePlayerViewPrefab, ShootPrefab, RewindPrefab, hudController);
+                _clientLogic.Init(camera, playerViewPrefab, shootPrefab, hitParticles, rewindPrefab, hudController);
                 
                 // sub to death screen events
                 hudController.OnRespawn = () =>
                 {
                     _clientLogic.Destroy();
-                    _clientLogic.Init(camera, playerViewPrefab, remotePlayerViewPrefab, ShootPrefab, RewindPrefab, hudController);
-                    
+                    _clientLogic.Init(camera, playerViewPrefab, shootPrefab, hitParticles, rewindPrefab, hudController);
                 };
                 
                 hudController.OnMainMenu = () =>

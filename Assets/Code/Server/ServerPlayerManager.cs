@@ -67,7 +67,9 @@ namespace Code.Server
                     FromPlayer = serverPlayer.Id,
                     CommandId = serverPlayer.LastProcessedCommandId,
                     ServerTick = _serverLogic.Tick,
-                    Hit = to
+                    Hit = to,
+                    AnyHit = hit != null,
+                    PlayerHit = hit != null ? hit.Id : (byte)0
                 };
                 _serverLogic.SendShoot(ref sp);
             }
@@ -78,7 +80,9 @@ namespace Code.Server
                     FromPlayer = aiPlayer.Id,
                     CommandId = aiPlayer.LastProcessedCommandId,
                     ServerTick = _serverLogic.Tick,
-                    Hit = to
+                    Hit = to,
+                    AnyHit = hit != null,
+                    PlayerHit = hit != null ? hit.Id : (byte)0
                 };
                 _serverLogic.SendShoot(ref sp);
             }

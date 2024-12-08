@@ -41,11 +41,11 @@ namespace Code.Client.Managers
             _client = new NetManager(this)
             {
                 AutoRecycle = true,
-                SimulateLatency = true,
-                SimulationMaxLatency = 25 + 10,
-                SimulationMinLatency = 25,
-                SimulatePacketLoss = true,
-                SimulationPacketLossChance = 2
+                // SimulateLatency = true,
+                // SimulationMaxLatency = 25 + 10,
+                // SimulationMinLatency = 25,
+                // SimulatePacketLoss = true,
+                // SimulationPacketLossChance = 2
             };
             _writer = new NetDataWriter();
             _packetProcessor = new NetPacketProcessor();

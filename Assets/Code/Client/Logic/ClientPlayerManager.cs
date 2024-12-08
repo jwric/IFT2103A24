@@ -19,6 +19,11 @@ namespace Code.Client.Logic
         {
             Player.Update(delta);
         }
+        
+        public void FrameUpdate(float delta)
+        {
+            Player.FrameUpdate(delta);
+        }
     }
 
     public class ClientPlayerManager : BasePlayerManager
@@ -106,15 +111,21 @@ namespace Code.Client.Logic
             foreach (var kv in _players)
                 kv.Value.Update(LogicTimerClient.FixedDelta);
         }
+        
+        public void FrameUpdate(float delta)
+        {
+            foreach (var kv in _players)
+                kv.Value.FrameUpdate(delta);
+        }
 
-        public void AddClientPlayer(ClientPlayer player, ClientPlayerView view)
+        public void AddClientPlayer(ClientPlayer player, PlayerView view)
         {
             _clientPlayer = player;
             _clientPlayer.SetPlayerView(view);
             _players.Add(player.Id, new PlayerHandler(player, view));
         }
         
-        public void AddPlayer(RemotePlayer player, RemotePlayerView view)
+        public void AddPlayer(RemotePlayer player, PlayerView view)
         {
             player.SetPlayerView(view);
             _players.Add(player.Id, new PlayerHandler(player, view));

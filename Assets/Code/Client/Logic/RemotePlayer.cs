@@ -6,7 +6,7 @@ namespace Code.Client.Logic
 {
     public class RemotePlayer : BasePlayer
     {
-        private RemotePlayerView _view;
+        private PlayerView _view;
         
         private readonly LiteRingBuffer<PlayerState> _buffer = new(30);
         private float _bufferTime;
@@ -23,7 +23,7 @@ namespace Code.Client.Logic
         
         public Transform Transform => _view.transform; // TODO: Remove this
         
-        public void SetPlayerView(RemotePlayerView view)
+        public void SetPlayerView(PlayerView view)
         {
             _view = view;
         }
@@ -40,6 +40,28 @@ namespace Code.Client.Logic
             // Do nothing
         }
 
+        public void OnShoot(Vector2 target)
+        {
+            _view.OnShoot(target);
+        }
+        
+        public override void FrameUpdate(float delta)
+        {
+        }
+
+        public override void NotifyHit(HitInfo hit)
+        {
+            _view.OnHit(hit);
+        }
+
+        public void UpdateView()
+        {
+            _view.Rb.MovePosition(Position);
+            _view.Rb.MoveRotation(Rotation * Mathf.Rad2Deg);
+            _view.Rb.velocity = Velocity;
+            _view.Rb.angularVelocity = AngularVelocity;
+        }
+        
         public void UpdatePosition(float delta)
         {
             if (_buffer.Count < 2)
@@ -142,6 +164,12 @@ namespace Code.Client.Logic
             }
             
             _buffer.Add(state);
+        }
+
+        public override void Update(float delta)
+        {
+            UpdatePosition(delta);
+            UpdateView();
         }
 
         public void Die()

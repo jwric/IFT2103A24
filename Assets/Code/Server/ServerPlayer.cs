@@ -35,6 +35,11 @@ namespace Code.Server
         {
             _playerView = playerView;
         }
+        
+        public void ApplyForce(Vector2 force)
+        {
+            _playerView.Move(force);
+        }
 
 
         private bool test = false;
@@ -171,6 +176,10 @@ namespace Code.Server
             // Draw a cross at the player's position for visual debugging
             DrawDebugCross(Position, 0.1f, test ? Color.green : Color.white);
             test = false;
+        }
+
+        public override void FrameUpdate(float delta)
+        {
         }
 
         // Utility function to draw a cross at the player's position

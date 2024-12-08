@@ -2,7 +2,7 @@ using System;
 
 namespace Code.Shared
 {
-    public class GameObjectPool<T> where T : class
+    public class GameObjectPool<T> : IDisposable where T : class
     {
         private readonly T[] _pool;
         private readonly Func<T> _creator;

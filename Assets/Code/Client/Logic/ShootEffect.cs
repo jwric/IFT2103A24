@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Code.Client.Logic
 {
-    public class ShootEffect : MonoBehaviour
+    public class ShootEffect : SpawnableObject
     {
         [SerializeField] private LineRenderer _trailRenderer;
         [SerializeField] private AudioSource _source;
@@ -13,14 +13,7 @@ namespace Code.Client.Logic
         [SerializeField] private AudioClip[] _hitClips;
 
         private GameTimer _aliveTimer = new GameTimer(0.3f);
-        private Action<ShootEffect> _onDeathCallback;
         private Vector3[] _positions = new Vector3[2];
-        
-        public void Init(Action<ShootEffect> onDeathCallback)
-        {
-            _onDeathCallback = onDeathCallback;
-            gameObject.SetActive(false);
-        }
         
         public void Spawn(Vector2 from, Vector2 to)
         {
@@ -39,8 +32,7 @@ namespace Code.Client.Logic
 
         private void OnDeath()
         {
-            _onDeathCallback(this);
-            gameObject.SetActive(false);
+            ReturnToPool();
         }
 
         private void Update()

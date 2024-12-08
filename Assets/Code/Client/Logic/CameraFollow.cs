@@ -8,7 +8,9 @@ namespace Code.Client
         public Transform target;
         public float smoothSpeed = 8f;
         private Camera _camera;
-
+        public Camera Camera => _camera;
+        
+        
         void OnEnable()
         {
             _camera = GetComponent<Camera>();

@@ -74,6 +74,8 @@ namespace Code.Shared
         public byte FromPlayer;
         public ushort CommandId;
         public Vector2 Hit;
+        public bool AnyHit;
+        public byte PlayerHit;
         public ushort ServerTick;
         
         public void Serialize(NetDataWriter writer)
@@ -81,6 +83,8 @@ namespace Code.Shared
             writer.Put(FromPlayer);
             writer.Put(CommandId);
             writer.Put(Hit);
+            writer.Put(AnyHit);
+            writer.Put(PlayerHit);
             writer.Put(ServerTick);
         }
 
@@ -89,6 +93,8 @@ namespace Code.Shared
             FromPlayer = reader.GetByte();
             CommandId = reader.GetUShort();
             Hit = reader.GetVector2();
+            AnyHit = reader.GetBool();
+            PlayerHit = reader.GetByte();
             ServerTick = reader.GetUShort();
         }
     }

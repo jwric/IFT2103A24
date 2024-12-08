@@ -2,6 +2,13 @@
 
 namespace Code.Shared
 {
+    public struct HitInfo
+    {
+        public BasePlayer Damager;
+        public byte Damage;
+        public Vector2 Position;
+    }
+    
     public abstract class BasePlayer
     {
         public readonly string Name;
@@ -27,7 +34,7 @@ namespace Code.Shared
         public float AngularVelocity => _angularVelocity;
         public readonly byte Id;
         public int Ping;
-
+        
         protected BasePlayer(BasePlayerManager playerManager, string name, byte id)
         {
             Id = id;
@@ -58,10 +65,10 @@ namespace Code.Shared
                 _playerManager.OnPlayerDeath(this, damager);
         }
         
-        public virtual void NotifyHit(byte damage, BasePlayer damager)
+        public virtual void NotifyHit(HitInfo hit)
         {
         }
-        
+
         public abstract void ApplyInput(PlayerInputPacket command, float delta);
         // {
         //     Vector2 velocity = Vector2.zero;
@@ -89,6 +96,8 @@ namespace Code.Shared
         //     }
         //     
         // }
+        
+        public abstract void FrameUpdate(float delta);
 
         public virtual void Update(float delta)
         {

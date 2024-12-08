@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Code.Client.GameStates;
 using Code.Client.UI;
 using Code.Server;
+using Code.Shared;
 using UnityEngine;
 
 namespace Code.Client.Managers
@@ -35,14 +36,11 @@ namespace Code.Client.Managers
         public Settings Settings;
         
         // Prefabs
-        public Logic.ClientPlayerView ClientPlayerViewPrefab;
-        public Logic.RemotePlayerView RemotePlayerViewPrefab;
+        public Logic.PlayerView PlayerViewPrefab;
         public Logic.ShootEffect ShootEffectPrefab;
+        public PooledParticleSystem HitParticles;
         public GameObject RewindGO;
         public CameraFollow Camera;
-
-        [SerializeField]
-        private ServerLogic _serverLogic;
 
         private void Awake()
         {

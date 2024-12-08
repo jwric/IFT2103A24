@@ -9198,15 +9198,14 @@ MonoBehaviour:
   _gameHUD: {fileID: 1179676362}
   _loadingScreen: {fileID: 357880097}
   _pauseMenu: {fileID: 1430547055}
-  ClientPlayerViewPrefab: {fileID: 4804507857254071616, guid: b1a4afb95e3f3cc47a5a564bf558aeb5,
-    type: 3}
-  RemotePlayerViewPrefab: {fileID: 6744767739606999446, guid: c6eea74779076dd438c3907e95baeaa1,
+  PlayerViewPrefab: {fileID: 4804507857254071616, guid: da08e55069c0fb64bb66837943261bf8,
     type: 3}
   ShootEffectPrefab: {fileID: -4708360437246913611, guid: 1074f2e945873fe429ce817b90eafcf2,
     type: 3}
+  HitParticles: {fileID: 5288479048462478697, guid: 038a811c83af61c4692d04744a5161d8,
+    type: 3}
   RewindGO: {fileID: 151283213529981653, guid: 61c0375254e5c004292b612f9777f52b, type: 3}
   Camera: {fileID: 1751104812}
-  _serverLogic: {fileID: 0}
 --- !u!4 &1830127088
 Transform:
   m_ObjectHideFlags: 0

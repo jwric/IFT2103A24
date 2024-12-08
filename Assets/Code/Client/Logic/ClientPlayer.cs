@@ -10,7 +10,7 @@ namespace Code.Client.Logic
 {
     public class ClientPlayer : BasePlayer
     {
-        private ClientPlayerView _view;
+        private PlayerView _view;
         private PlayerInputPacket _nextCommand;
         private readonly ClientLogic _clientLogic;
         private readonly ClientPlayerManager _playerManager;
@@ -66,9 +66,14 @@ namespace Code.Client.Logic
             SceneManager.MoveGameObjectToScene(obj, RewindScene);
         }
         
-        public void SetPlayerView(ClientPlayerView view)
+        public void SetPlayerView(PlayerView view)
         {
             _view = view;
+        }
+        
+        public override void NotifyHit(HitInfo hit)
+        {
+            _view.OnHit(hit);
         }
 
         private void ApplyInputToRigidbody(Rigidbody2D rb, PlayerInputPacket command)
@@ -99,7 +104,7 @@ namespace Code.Client.Logic
             rb.angularVelocity = ourState.AngularVelocity;
         }
         
-        private void RewindAndReapplyPredictions(PlayerState ourState)
+        private void RewindAndReapplyPredictions(PlayerState ourState, bool onlyRotation = false)
         {
             // Vector2 prevPosition = _view.Rb.position + _positionError;
             // float prevRotation = _view.Rb.rotation + _rotationError;
@@ -109,7 +114,7 @@ namespace Code.Client.Logic
             SyncWithServerState(_rewindRb, ourState);
 
             // Fixes jittering, im not sure why
-            RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
+            // RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
             
             // place remote objects in the rewind scene for collision prediction
             {
@@ -147,16 +152,17 @@ namespace Code.Client.Logic
             // Apply predictions in the rewind scene
             for (var index = 0; index < _predictionPlayerStates.Count; index++)
             {
+                RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
                 var input = _predictionPlayerStates[index];
                 ref var state = ref _clientPlayerStates[index];
                 state.Position = _rewindRb.position;
                 state.Rotation = _rewindRb.rotation * Mathf.Deg2Rad;
                 state.Velocity = _rewindRb.velocity;
                 state.AngularVelocity = _rewindRb.angularVelocity;
-                
                 ApplyInputToRigidbody(_rewindRb, input);
-                RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
             }
+            RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
+
             
             List<int> toRemove = new List<int>();
             // Destroy the remote objects that are no longer in the game
@@ -179,10 +185,18 @@ namespace Code.Client.Logic
             // Update the view with the result of the rewind
             if (GameManager.Instance.Settings.ServerReconciliation)
             {
-                _view.Rb.MovePosition(_rewindRb.position);
-                _view.Rb.MoveRotation(_rewindRb.rotation);
-                _view.Rb.velocity = _rewindRb.velocity;
-                _view.Rb.angularVelocity = _rewindRb.angularVelocity;
+                if (onlyRotation)
+                {
+                    _view.Rb.MoveRotation(_rewindRb.rotation);
+                    _view.Rb.angularVelocity = _rewindRb.angularVelocity;
+                }
+                else
+                {
+                    _view.Rb.MovePosition(_rewindRb.position);
+                    _view.Rb.MoveRotation(_rewindRb.rotation);
+                    _view.Rb.velocity = _rewindRb.velocity;
+                    _view.Rb.angularVelocity = _rewindRb.angularVelocity;
+                }
             }
             
             // if ((prevPosition - _rewindRb.position).sqrMagnitude >= 4.0f)
@@ -254,7 +268,6 @@ namespace Code.Client.Logic
                 if (!GameManager.Instance.Settings.ClientSidePrediction)
                 {
                     SyncWithServerState(_view.Rb, ourState);
-                    // remove predictions
                     return;
                 }
                 
@@ -262,9 +275,7 @@ namespace Code.Client.Logic
                 float rotationError = ourState.Rotation - _clientPlayerStates.First.Rotation;
                 if (positionError.sqrMagnitude > 0.1f || Mathf.Abs(rotationError) > 5f*Mathf.Deg2Rad)
                 {
-                    RewindAndReapplyPredictions(ourState);
-
-                    // Debug.LogWarning($"[C] Position error: {positionError}");
+                    RewindAndReapplyPredictions(ourState, false);
                 }
             }
             else if (diff >= _predictionPlayerStates.Count)
@@ -376,7 +387,7 @@ namespace Code.Client.Logic
             _packetsToSend++;            
             
             _updateCount++;
-            if (_updateCount == 3)
+            if (_updateCount == 1)
             {
                 _updateCount = 0;
                 foreach (var t in _predictionPlayerStates)
@@ -384,6 +395,48 @@ namespace Code.Client.Logic
             }
             
             base.Update(delta);
+        }
+
+        public override void FrameUpdate(float delta)
+        {
+            var vert = Input.GetAxis("Vertical");
+            var horz = Input.GetAxis("Horizontal");
+            var fire = Input.GetAxis("Fire1");
+            var aim = Input.GetAxis("Fire2");
+            var brake = Input.GetAxis("Jump");
+            
+            Vector2 velocity = new Vector2(horz, vert);
+            
+            float torque = 0f;
+            
+            if (brake > 0f)
+            {
+                // counteract the velocity to brake using derivative control to reach angular velocity 0
+                float angularVelocity = _view.Rb.angularVelocity;
+                float kD = 0.1f;
+                torque = -kD * angularVelocity;
+            }
+            else if (aim > 0f)
+            {
+                Vector2 mousePos = _clientLogic._camera.Camera.ScreenToWorldPoint(Input.mousePosition);
+                Vector2 dir = mousePos - _view.Rb.position;
+                float targetRotation = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+
+                // Calculate the angle difference
+                float rotationDiff = GetAngleDifference(_view.Rb.rotation, targetRotation);
+
+                // Proportional and Derivative Control
+                float angularVelocity = _view.Rb.angularVelocity;
+                float kP = 0.5f;
+                float kD = 0.1f;
+
+                torque = (kP * rotationDiff) - (kD * angularVelocity);
+            }
+
+            // Clamp the torque input to [-1, 1]
+            torque = Mathf.Clamp(torque, -1f, 1f);
+
+            SetInput(velocity, torque, fire > 0f);
         }
 
         public override void ApplyInput(PlayerInputPacket command, float delta)
@@ -397,6 +450,7 @@ namespace Code.Client.Logic
                 {
                     _shootTimer.Reset();
                     Shoot();
+                    _view.OnShoot(_view.transform.right);
                 }
             }
         }
@@ -404,6 +458,18 @@ namespace Code.Client.Logic
         public void Die()
         {
             _view.Die();
+        }
+
+        public static float GetAngleDifference(float angle1, float angle2)
+        {
+            float difference = angle2 - angle1;
+
+            difference = (difference + 180) % 360;
+            if (difference < 0)
+            {
+                difference += 360;
+            }
+            return difference - 180;
         }
         
     }
