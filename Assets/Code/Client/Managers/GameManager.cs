@@ -35,6 +35,8 @@ namespace Code.Client.Managers
         // settings
         public Settings Settings;
         
+        public PlayerViewPrefabs PlayerViewPrefabs;
+        
         // Prefabs
         public Logic.PlayerView PlayerViewPrefab;
         public Logic.ShootEffect ShootEffectPrefab;

@@ -14,7 +14,7 @@ namespace Code
         [SerializeField] private string serverSceneName = "SampleScene";
         [SerializeField] private string clientSceneName = "ClientScene";
 
-        bool isServer = false;
+        // bool isServer = false;
         
         bool hasChosen = false;
         
@@ -41,7 +41,7 @@ namespace Code
 
         IEnumerator LaunchServer()
         {
-            isServer = true;
+            // isServer = true;
             Debug.Log("Launching Server...");
             serverText.color = Color.green;
             yield return new WaitForSeconds(1);

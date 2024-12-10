@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Code.Shared
 {
@@ -12,6 +14,7 @@ namespace Code.Shared
     public abstract class BasePlayer
     {
         public readonly string Name;
+        public readonly List<HardpointSlot> Hardpoints = new();
 
         protected float _speed = 7f;
         protected float _angularSpeed = 0.5f;
@@ -34,7 +37,7 @@ namespace Code.Shared
         public float AngularVelocity => _angularVelocity;
         public readonly byte Id;
         public int Ping;
-        
+
         protected BasePlayer(BasePlayerManager playerManager, string name, byte id)
         {
             Id = id;
@@ -51,11 +54,11 @@ namespace Code.Shared
 
         protected void Shoot()
         {
-            const float MaxLength = 20f;
-            Vector2 dir = new Vector2(Mathf.Cos(_rotation), Mathf.Sin(_rotation));
-            var player = _playerManager.CastToPlayer(_position, dir, MaxLength, this);
-            Vector2 target = _position + dir * (player != null ? Vector2.Distance(_position, player._position) : MaxLength);
-            _playerManager.OnShoot(this, target, player, Damage);
+            // const float MaxLength = 20f;
+            // Vector2 dir = new Vector2(Mathf.Cos(_rotation), Mathf.Sin(_rotation));
+            // var player = _playerManager.CastToPlayer(_position, dir, MaxLength, this);
+            // Vector2 target = _position + dir * (player != null ? Vector2.Distance(_position, player._position) : MaxLength);
+            // _playerManager.OnShoot(this, target, player, Damage);
         }
         
         public void OnHit(byte damage, BasePlayer damager)
@@ -67,6 +70,14 @@ namespace Code.Shared
         
         public virtual void NotifyHit(HitInfo hit)
         {
+            // TODO: find a way to do cleaner event handling
+            // do not implement
+        }
+        
+        public virtual void OnHardpointAction(HardpointAction action)
+        {
+            // todo: find a way to do cleaner event handling
+            // dot not implement
         }
 
         public abstract void ApplyInput(PlayerInputPacket command, float delta);
@@ -102,6 +113,69 @@ namespace Code.Shared
         public virtual void Update(float delta)
         {
             _shootTimer.UpdateAsCooldown(delta);
+            
+            // update hardpoints
+            for (var i = 0; i < Hardpoints.Count; i++)
+            {
+                var slot = Hardpoints[i];
+                slot.Hardpoint.Update(delta);
+                if (slot.Hardpoint.HasAction(out var action))
+                {
+                    var hardpointAction = new HardpointAction
+                    {
+                        SlotId = slot.Id,
+                        ActionCode = action.ActionCode
+                    };
+                    _playerManager.OnHardpointAction(this, hardpointAction);
+                    
+                    // handle hardpoint actions
+                    // for now all hardpoint fire actions are the same
+                    if (action.ActionCode == 1)
+                    {
+                        // calculate the target position
+                        // convert the hardpoint position to world space
+                        Vector2 mountPosition = (Vector2)slot.Position * 1/32f;
+                        Vector2 rotatedMountPosition = Quaternion.Euler(0, 0, _rotation * Mathf.Rad2Deg) * mountPosition;
+                        Vector2 fireWorldPosition = _position + rotatedMountPosition;
+                        
+                        float hardpointSignedAngle = Mathf.DeltaAngle(0f, slot.Hardpoint.Rotation);
+                        // Hardpoint angle is in Degrees and we need to convert it to Radians
+                        float shotWorldAngle = hardpointSignedAngle * Mathf.Deg2Rad + _rotation;
+                        
+                        const float MaxLength = 20f;
+                        Vector2 dir = new Vector2(Mathf.Cos(shotWorldAngle), Mathf.Sin(shotWorldAngle));
+                        var player = _playerManager.CastToPlayer(fireWorldPosition, dir, MaxLength, this);
+                        Vector2 target = fireWorldPosition + dir * (player != null ? Vector2.Distance(fireWorldPosition, player._position) : MaxLength);
+                        _playerManager.OnShoot(this, slot.Id, target, player, Damage);
+
+                        Debug.DrawLine(fireWorldPosition, target, Color.red, 0.5f);
+                    }
+                }
+            }
+        }
+        
+        public PlayerInitialInfo GetInitialInfo()
+        {
+            var hardpointsData = new HardpointSlotInfo[Hardpoints.Count];
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                hardpointsData[i] = new HardpointSlotInfo
+                {
+                    Id = Hardpoints[i].Id,
+                    Type = Hardpoints[i].Hardpoint.Type,
+                    X = Hardpoints[i].Position.x,
+                    Y = Hardpoints[i].Position.y,
+                };
+            }
+            
+            return new PlayerInitialInfo
+            {
+                Id = Id,
+                UserName = Name,
+                Health = Health,
+                NumHardpointSlots = (byte) Hardpoints.Count,
+                Hardpoints = hardpointsData,
+            };
         }
     }
 }

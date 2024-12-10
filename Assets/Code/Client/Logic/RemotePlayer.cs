@@ -1,6 +1,7 @@
 using Code.Client.Managers;
 using Code.Shared;
 using UnityEngine;
+using HardpointSlot = Code.Shared.HardpointSlot;
 
 namespace Code.Client.Logic
 {
@@ -16,9 +17,20 @@ namespace Code.Client.Logic
         public RemotePlayer(ClientPlayerManager manager, string name, PlayerJoinedPacket pjPacket) : base(manager, name, pjPacket.InitialPlayerState.Id)
         {
             _position = pjPacket.InitialPlayerState.Position;
-            _health = pjPacket.Health;
+            _health = pjPacket.InitialInfo.Health;
             _rotation = pjPacket.InitialPlayerState.Rotation;
             _buffer.Add(pjPacket.InitialPlayerState);
+            
+            // Add hardpoints
+            for (var index = 0; index < pjPacket.InitialInfo.Hardpoints.Length; index++)
+            {
+                var slot = pjPacket.InitialInfo.Hardpoints[index];
+                var state = pjPacket.InitialPlayerState.Hardpoints[index];
+
+                var hardpoint = HardpointFactory.CreateHardpoint(slot.Type);
+                hardpoint.SetRotation(state.Rotation);
+                Hardpoints.Add(new HardpointSlot(slot.Id, hardpoint, new Vector2Int(slot.X, slot.Y)));
+            }
         }
         
         public Transform Transform => _view.transform; // TODO: Remove this
@@ -39,12 +51,24 @@ namespace Code.Client.Logic
         {
             // Do nothing
         }
-
-        public void OnShoot(Vector2 target)
-        {
-            _view.OnShoot(target);
-        }
         
+        public Vector2 GetViewHardpointFirePosition(byte id)
+        {
+            _view.GetHardpointView(id, out var hardpointView);
+            return hardpointView?.GetFirePosition() ?? Position;
+        }
+
+        // public void OnShoot(Vector2 target)
+        // {
+        //     // _view.OnShoot(target);
+        // }
+
+        public override void OnHardpointAction(HardpointAction action)
+        {
+            _view.GetHardpointView(action.SlotId, out var hardpointView);
+            hardpointView?.OnHardpointAction(action.ActionCode);
+        }
+
         public override void FrameUpdate(float delta)
         {
         }
@@ -60,6 +84,15 @@ namespace Code.Client.Logic
             _view.Rb.MoveRotation(Rotation * Mathf.Rad2Deg);
             _view.Rb.velocity = Velocity;
             _view.Rb.angularVelocity = AngularVelocity;
+            
+            // update hardpoint views
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                var slot = Hardpoints[i];
+                var hardpoint = slot.Hardpoint;
+                _view.GetHardpointView(slot.Id, out var hardpointView);
+                hardpointView?.CurrentRotation(hardpoint.Rotation);
+            }
         }
         
         public void UpdatePosition(float delta)
@@ -73,6 +106,12 @@ namespace Code.Client.Logic
                     _rotation = Mathf.Lerp(_rotation, singleData.Rotation, delta * 0.5f); // Reduced speed
                     _velocity = Vector2.Lerp(_velocity, singleData.Velocity, delta * 0.5f); // Reduced speed
                     _angularVelocity = Mathf.Lerp(_angularVelocity, singleData.AngularVelocity, delta * 0.5f); // Reduced speed
+                    
+                    // update hardpoints
+                    for (int i = 0; i < Hardpoints.Count; i++)
+                    {
+                        Hardpoints[i].Hardpoint.SetRotation(Mathf.LerpAngle(Hardpoints[i].Hardpoint.Rotation, singleData.Hardpoints[i].Rotation, delta * 0.5f));
+                    }
                 }
                 return;
             }
@@ -102,6 +141,12 @@ namespace Code.Client.Logic
             
             _angularVelocity = Mathf.Lerp(dataA.AngularVelocity, dataB.AngularVelocity, lerpT);
 
+            // update hardpoints
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                Hardpoints[i].Hardpoint.SetRotation(Mathf.LerpAngle(dataA.Hardpoints[i].Rotation, dataB.Hardpoints[i].Rotation, lerpT));
+            }
+            
             _interpolationTimer += delta;
 
             if (_interpolationTimer >= stateDeltaTime)
@@ -142,6 +187,11 @@ namespace Code.Client.Logic
                 _rotation = state.Rotation;
                 _velocity = state.Velocity;
                 _angularVelocity = state.AngularVelocity;
+                // update hardpoints
+                for (int i = 0; i < Hardpoints.Count; i++)
+                {
+                    Hardpoints[i].Hardpoint.SetRotation(state.Hardpoints[i].Rotation);
+                }
                 return;
             }
             

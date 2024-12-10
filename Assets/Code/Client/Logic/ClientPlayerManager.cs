@@ -67,10 +67,22 @@ namespace Code.Client.Logic
             }
         }
 
-        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
+        public override void OnShoot(BasePlayer from, byte hardpointId, Vector2 to, BasePlayer hit, byte damage)
         {
-            if(from == _clientPlayer)
-                _clientLogic.SpawnShoot(from.Position, to);
+            if (from == _clientPlayer)
+            {
+                var cp = (ClientPlayer)from;
+                
+                var firePos = cp.GetViewHardpointFirePosition(hardpointId);
+                _clientLogic.SpawnShoot(firePos, to);
+            }
+        }
+
+        public override void OnHardpointAction(BasePlayer player, HardpointAction action)
+        {
+            // if (player == _clientPlayer)
+            //     return;
+            player.OnHardpointAction(action);
         }
 
         public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)
@@ -136,6 +148,7 @@ namespace Code.Client.Logic
             foreach (var p in _players.Values)
                 p.View.Destroy();
             _players.Clear();
+            _clientPlayer = null;
         }
     }
 }

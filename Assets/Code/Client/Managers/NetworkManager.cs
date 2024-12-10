@@ -32,6 +32,7 @@ namespace Code.Client.Managers
         public event Action<PlayerLeavedPacket> OnPlayerLeaved;
         public event Action<ShootPacket> OnShoot;
         public event Action<PlayerDeathPacket> OnPlayerDeath;
+        public event Action<HardpointActionPacket> OnHardpointAction;
         
         public int Ping { get; private set; }
         
@@ -51,6 +52,7 @@ namespace Code.Client.Managers
             _packetProcessor = new NetPacketProcessor();
             _packetProcessor.RegisterNestedType((w, v) => w.Put(v), reader => reader.GetVector2());
             _packetProcessor.RegisterNestedType<PlayerState>();
+            _packetProcessor.RegisterNestedType<PlayerInitialInfo>();
             _packetProcessor.SubscribeReusable<PlayerJoinedPacket>(OnPlayerJoinedPacket);
             _packetProcessor.SubscribeReusable<JoinAcceptPacket>(OnJoinAcceptPacket);
             _packetProcessor.SubscribeReusable<PlayerLeavedPacket>(OnPlayerLeavedPacket);
@@ -210,6 +212,11 @@ namespace Code.Client.Managers
                     PlayerDeathPacket deathPacket = new PlayerDeathPacket();
                     deathPacket.Deserialize(reader);
                     OnPlayerDeath?.Invoke(deathPacket);
+                    break;
+                case PacketType.HardpointAction:
+                    HardpointActionPacket actionPacket = new HardpointActionPacket();
+                    actionPacket.Deserialize(reader);
+                    OnHardpointAction?.Invoke(actionPacket);
                     break;
                 default:
                     Debug.Log("Unhandled packet: " + pt);

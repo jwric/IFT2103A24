@@ -58,13 +58,14 @@ namespace Code.Server
             }
         }
         
-        public override void OnShoot(BasePlayer from, Vector2 to, BasePlayer hit, byte damage)
+        public override void OnShoot(BasePlayer from, byte hardpointId, Vector2 to, BasePlayer hit, byte damage)
         {
             if (from is ServerPlayer serverPlayer)
             {
                 ShootPacket sp = new ShootPacket
                 {
                     FromPlayer = serverPlayer.Id,
+                    HardpointId = hardpointId,
                     CommandId = serverPlayer.LastProcessedCommandId,
                     ServerTick = _serverLogic.Tick,
                     Hit = to,
@@ -78,6 +79,7 @@ namespace Code.Server
                 ShootPacket sp = new ShootPacket
                 {
                     FromPlayer = aiPlayer.Id,
+                    HardpointId = hardpointId,
                     CommandId = aiPlayer.LastProcessedCommandId,
                     ServerTick = _serverLogic.Tick,
                     Hit = to,
@@ -92,6 +94,19 @@ namespace Code.Server
                 var serverHit = hit;
                 serverHit.OnHit(damage, from);
             }
+        }
+
+        public override void OnHardpointAction(BasePlayer player, HardpointAction action)
+        {
+            // send hardpoint action packets to every client except the player
+            HardpointActionPacket hap = new HardpointActionPacket
+            {
+                PlayerId = player.Id,
+                HardpointId = action.SlotId,
+                ActionCode = action.ActionCode,
+                ServerTick = _serverLogic.Tick,
+            };
+            _serverLogic.SendHardpointAction(ref hap);
         }
 
         public override void OnPlayerDeath(BasePlayer player, BasePlayer killer)

@@ -12,6 +12,7 @@ namespace Code.Shared
         Serialized,
         Shoot,
         PlayerDeath,
+        HardpointAction,
     }
     
     //Auto serializable packets
@@ -22,17 +23,79 @@ namespace Code.Shared
 
     public class JoinAcceptPacket
     {
-        public byte Id { get; set; }
+        public PlayerInitialInfo OwnPlayerInfo { get; set; }
         public ushort ServerTick { get; set; }
     }
 
+    /// <summary>
+    /// Describes a hardpoint slot on a player.
+    /// </summary>
+    public struct HardpointSlotInfo : INetSerializable
+    {
+        public byte Id;
+        public HardpointType Type;
+        public int X;
+        public int Y;
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Id);
+            writer.Put((byte)Type);
+            writer.Put(X);
+            writer.Put(Y);
+        }
+        
+        public void Deserialize(NetDataReader reader)
+        {
+            Id = reader.GetByte();
+            Type = (HardpointType)reader.GetByte();
+            X = reader.GetInt();
+            Y = reader.GetInt();
+        }
+    }
+    
+    /// <summary>
+    /// Initial info about a player that is sent to all clients when a player joins the game.
+    /// Like name, ship type, hardpoints, etc.
+    /// </summary>
+    public struct PlayerInitialInfo : INetSerializable
+    {
+        public byte Id;
+        public string UserName;
+        public byte Health;
+        
+        public byte NumHardpointSlots;
+        public HardpointSlotInfo[] Hardpoints;
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Id);
+            writer.Put(UserName);
+            writer.Put(Health);
+            writer.Put(NumHardpointSlots);
+            for (int i = 0; i < NumHardpointSlots; i++)
+                Hardpoints[i].Serialize(writer);
+        }
+        
+        public void Deserialize(NetDataReader reader)
+        {
+            Id = reader.GetByte();
+            UserName = reader.GetString();
+            Health = reader.GetByte();
+            NumHardpointSlots = reader.GetByte();
+            if (Hardpoints == null || Hardpoints.Length < NumHardpointSlots)
+                Hardpoints = new HardpointSlotInfo[NumHardpointSlots];
+            for (int i = 0; i < NumHardpointSlots; i++)
+                Hardpoints[i].Deserialize(reader);
+        }
+    }
+    
     public class PlayerJoinedPacket
     {
-        public string UserName { get; set; }
         public bool NewPlayer { get; set; }
-        public byte Health { get; set; }
-        public ushort ServerTick { get; set; }
+        public PlayerInitialInfo InitialInfo { get; set; }
         public PlayerState InitialPlayerState { get; set; }
+        public ushort ServerTick { get; set; }
     }
 
     public class PlayerLeavedPacket
@@ -72,6 +135,7 @@ namespace Code.Shared
     public struct ShootPacket : INetSerializable
     {
         public byte FromPlayer;
+        public byte HardpointId;
         public ushort CommandId;
         public Vector2 Hit;
         public bool AnyHit;
@@ -81,6 +145,7 @@ namespace Code.Shared
         public void Serialize(NetDataWriter writer)
         {
             writer.Put(FromPlayer);
+            writer.Put(HardpointId);
             writer.Put(CommandId);
             writer.Put(Hit);
             writer.Put(AnyHit);
@@ -91,10 +156,35 @@ namespace Code.Shared
         public void Deserialize(NetDataReader reader)
         {
             FromPlayer = reader.GetByte();
+            HardpointId = reader.GetByte();
             CommandId = reader.GetUShort();
             Hit = reader.GetVector2();
             AnyHit = reader.GetBool();
             PlayerHit = reader.GetByte();
+            ServerTick = reader.GetUShort();
+        }
+    }
+    
+    public struct HardpointActionPacket : INetSerializable
+    {
+        public byte PlayerId;
+        public byte HardpointId;
+        public byte ActionCode;
+        public ushort ServerTick;
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(PlayerId);
+            writer.Put(HardpointId);
+            writer.Put(ActionCode);
+            writer.Put(ServerTick);
+        }
+
+        public void Deserialize(NetDataReader reader)
+        {
+            PlayerId = reader.GetByte();
+            HardpointId = reader.GetByte();
+            ActionCode = reader.GetByte();
             ServerTick = reader.GetUShort();
         }
     }
@@ -120,6 +210,27 @@ namespace Code.Shared
         }
     }
 
+    public struct HardpointInputState : INetSerializable
+    {
+        public byte Id;
+        public float Rotation;
+        public bool Fire;
+
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Id);
+            writer.Put(Rotation);
+            writer.Put(Fire);
+        }
+
+        public void Deserialize(NetDataReader reader)
+        {
+            Id = reader.GetByte();
+            Rotation = reader.GetFloat();
+            Fire = reader.GetBool();
+        }
+    }
+    
     public struct PlayerInputPacket : INetSerializable
     {
         public ushort Id;
@@ -129,6 +240,8 @@ namespace Code.Shared
         public ushort ServerTick;
         public float Delta;
         public float Time;
+        public byte NumHardpoints;
+        public HardpointInputState[] Hardpoints;
 
         public void Serialize(NetDataWriter writer)
         {
@@ -139,6 +252,9 @@ namespace Code.Shared
             writer.Put(ServerTick);
             writer.Put(Delta);
             writer.Put(Time);
+            writer.Put(NumHardpoints);
+            for (int i = 0; i < NumHardpoints; i++)
+                Hardpoints[i].Serialize(writer);
         }
 
         public void Deserialize(NetDataReader reader)
@@ -150,6 +266,33 @@ namespace Code.Shared
             ServerTick = reader.GetUShort();
             Delta = reader.GetFloat();
             Time = reader.GetFloat();
+            NumHardpoints = reader.GetByte();
+            if (Hardpoints == null || Hardpoints.Length < NumHardpoints)
+                Hardpoints = new HardpointInputState[NumHardpoints];
+            for (int i = 0; i < NumHardpoints; i++)
+            {
+                Hardpoints[i].Deserialize(reader);
+            }
+        }
+    }
+
+    public struct HardpointState : INetSerializable
+    {
+        public byte Id;
+        public float Rotation;
+        
+        public const int Size = sizeof(byte) + sizeof(float);
+        
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(Id);
+            writer.Put(Rotation);
+        }
+
+        public void Deserialize(NetDataReader reader)
+        {
+            Id = reader.GetByte();
+            Rotation = reader.GetFloat();
         }
     }
     
@@ -163,8 +306,15 @@ namespace Code.Shared
         public ushort Tick;
         public float Time;
         public byte Health;
+        public byte NumHardpoints;
+        public HardpointState[] Hardpoints;
 
-        public const int Size = sizeof(byte) + sizeof(float)*7 + sizeof(ushort) + sizeof(byte);
+        public const int BaseSize = sizeof(byte) + sizeof(float)*7 + sizeof(ushort) + sizeof(byte) + sizeof(byte);
+        
+        public static int CalculateSize(int numHardpoints)
+        {
+            return BaseSize + numHardpoints * HardpointState.Size;
+        }
         
         public void Serialize(NetDataWriter writer)
         {
@@ -176,6 +326,9 @@ namespace Code.Shared
             writer.Put(Tick);
             writer.Put(Time);
             writer.Put(Health);
+            writer.Put(NumHardpoints);
+            for (int i = 0; i < NumHardpoints; i++)
+                Hardpoints[i].Serialize(writer);
         }
 
         public void Deserialize(NetDataReader reader)
@@ -188,6 +341,13 @@ namespace Code.Shared
             Tick = reader.GetUShort();
             Time = reader.GetFloat();
             Health = reader.GetByte();
+            NumHardpoints = reader.GetByte();
+            if (Hardpoints == null || Hardpoints.Length < NumHardpoints)
+                Hardpoints = new HardpointState[NumHardpoints];
+            for (int i = 0; i < NumHardpoints; i++)
+            {
+                Hardpoints[i].Deserialize(reader);
+            }
         }
     }
     

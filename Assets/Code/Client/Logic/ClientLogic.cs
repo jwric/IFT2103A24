@@ -80,6 +80,7 @@ namespace Code.Client.Logic
             networkManager.OnShoot += OnShoot;
             networkManager.OnPlayerDeath += OnPlayerDeath;
             networkManager.OnSpawn += OnSpawn;
+            networkManager.OnHardpointAction += OnHardpointAction;
             
             // send join request
             SendJoinRequest();
@@ -112,8 +113,8 @@ namespace Code.Client.Logic
         
         private void OnPlayerJoined(PlayerJoinedPacket packet)
         {
-            Debug.Log($"[C] Player joined: {packet.UserName}");
-            var remotePlayer = new RemotePlayer(_playerManager, packet.UserName, packet);
+            Debug.Log($"[C] Player joined: {packet.InitialInfo.UserName}");
+            var remotePlayer = new RemotePlayer(_playerManager, packet.InitialInfo.UserName, packet);
             var view = PlayerView.Create(_playerViewPrefab, remotePlayer);
             _playerManager.AddPlayer(remotePlayer, view);
         }
@@ -132,6 +133,20 @@ namespace Code.Client.Logic
                 _gameHUD.UpdateHealth(_playerManager.OurPlayer.Health);
             }
         }
+        
+        private void OnHardpointAction(HardpointActionPacket packet)
+        {
+            var player = _playerManager.GetById(packet.PlayerId);
+            if (player == null || player == _playerManager.OurPlayer)
+                return;
+
+            Debug.Log($"[C] Hardpoint action: {packet.HardpointId}, {packet.ActionCode} from {player.Name} ({player.Id})");
+            player.OnHardpointAction(new HardpointAction
+            {
+                SlotId = packet.HardpointId,
+                ActionCode = packet.ActionCode
+            });
+        }
 
         private void OnShoot(ShootPacket packet)
         {
@@ -139,18 +154,26 @@ namespace Code.Client.Logic
             var p = _playerManager.GetById(_cachedShootPacket.FromPlayer);
             if (p != null && p != _playerManager.OurPlayer)
             {
+                // deprecated remove this
+                // if (p is RemotePlayer rp)
+                // {
+                //     rp.OnShoot(_cachedShootPacket.Hit);
+                // }
+                
                 if (p is RemotePlayer rp)
                 {
-                    rp.OnShoot(_cachedShootPacket.Hit);
-                }
-                SpawnShoot(p.Position, _cachedShootPacket.Hit);
+                    var firePos = rp.GetViewHardpointFirePosition(_cachedShootPacket.HardpointId);
+                    SpawnShoot(firePos, _cachedShootPacket.Hit);
+                }   
             }
             
             if (!_cachedShootPacket.AnyHit)
                 return;
             
             var pHit = _playerManager.GetById(_cachedShootPacket.PlayerHit);
-
+            if (pHit == null)
+                return;
+            
             var hitInfo = new HitInfo
             {
                 Damager = p,
@@ -169,8 +192,15 @@ namespace Code.Client.Logic
 
             if (player == _playerManager.OurPlayer)
             {
-                var serverPlayerKiller = killer as RemotePlayer;
-                _camera.target = serverPlayerKiller?.Transform;
+                if (killer == null)
+                {
+                    _camera.target = null;
+                }
+                else
+                {
+                    var serverPlayerKiller = killer as RemotePlayer;
+                    _camera.target = serverPlayerKiller?.Transform;
+                }
             }
             
             _playerManager.OnPlayerDeath(player, killer);
@@ -206,9 +236,9 @@ namespace Code.Client.Logic
 
         private void OnJoinAccept(JoinAcceptPacket packet)
         {
-            Debug.Log("[C] Join accept. Received player id: " + packet.Id);
+            Debug.Log("[C] Join accept. Received player id: " + packet.OwnPlayerInfo.Id + " Our name: " + packet.OwnPlayerInfo.UserName);
             _lastServerTick = packet.ServerTick;
-            var clientPlayer = new ClientPlayer(this, _playerManager, _username, packet.Id)
+            var clientPlayer = new ClientPlayer(this, _playerManager, packet.OwnPlayerInfo)
             {
                 RewindScene = _rewindScene,
                 RewindPhysicsScene = _rewindScene.GetPhysicsScene2D()
@@ -232,7 +262,7 @@ namespace Code.Client.Logic
 
         public void ShowDeathScreen(BasePlayer killer)
         {
-            _gameHUD.ShowDeathScreen($"Killed by {killer.Name}");
+            _gameHUD.ShowDeathScreen(killer == null ? "You died" : $"Killed by {killer.Name}");
         }
         
         public void Destroy()
@@ -253,6 +283,7 @@ namespace Code.Client.Logic
             networkManager.OnShoot -= OnShoot;
             networkManager.OnPlayerDeath -= OnPlayerDeath;
             networkManager.OnSpawn -= OnSpawn;
+            networkManager.OnHardpointAction -= OnHardpointAction;
         }
     }
 }

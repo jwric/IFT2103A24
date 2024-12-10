@@ -51,6 +51,7 @@ namespace Code.Server
            
             //register auto serializable PlayerState
             _packetProcessor.RegisterNestedType<PlayerState>();
+            _packetProcessor.RegisterNestedType<PlayerInitialInfo>();
             
             _packetProcessor.SubscribeReusable<JoinPacket, NetPeer>(OnJoinReceived);
             _netManager = new NetManager(this)
@@ -82,12 +83,12 @@ namespace Code.Server
             var player = new AIPlayer(_playerManager, "Bot " + _playerManager.Count, (byte)_playerManager.Count, _serverTick - 1);
             var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
             _playerManager.AddBot(player, playerView);
-            
+
             // send player join packet
             var pj = new PlayerJoinedPacket
             {
-                UserName = player.Name,
                 NewPlayer = true,
+                InitialInfo = player.GetInitialInfo(),
                 InitialPlayerState = player.NetworkState,
                 ServerTick = _serverTick
             };
@@ -133,6 +134,10 @@ namespace Code.Server
 
         private void OnLogicUpdate()
         {
+            // dont update if server is not running
+            if (!_netManager.IsRunning)
+                return;
+            
             Physics2D.Simulate(Time.fixedDeltaTime);
             // Debug.Log("Server tick: " + _serverTick);
             _serverTick = (ushort)((_serverTick + 1) % NetworkGeneral.MaxGameSequence);
@@ -150,8 +155,11 @@ namespace Code.Server
                 {
                     if (!(basePlayer is ServerPlayer player))
                         continue;
+
+                    byte playerNumHardpoints = (byte)player.Hardpoints.Count;
+
                     int statesMax = player.AssociatedPeer.GetMaxSinglePacketSize(DeliveryMethod.Unreliable) - ServerState.HeaderSize;
-                    statesMax /= PlayerState.Size;
+                    statesMax /= PlayerState.CalculateSize(playerNumHardpoints);
                 
                     for (int s = 0; s < (pCount-1)/statesMax + 1; s++)
                     {
@@ -211,14 +219,15 @@ namespace Code.Server
             player.Spawn(new Vector2(Random.Range(-2f, 2f), Random.Range(-2f, 2f)));
 
             //Send join accept
-            var ja = new JoinAcceptPacket { Id = player.Id, ServerTick = _serverTick };
+            var playerInitialInfo = player.GetInitialInfo();
+            var ja = new JoinAcceptPacket { OwnPlayerInfo = playerInitialInfo, ServerTick = _serverTick };
             peer.Send(WritePacket(ja), DeliveryMethod.ReliableOrdered);
 
             //Send to old players info about new player
             var pj = new PlayerJoinedPacket
             {
-                UserName = joinPacket.UserName,
                 NewPlayer = true,
+                InitialInfo = player.GetInitialInfo(),
                 InitialPlayerState = player.NetworkState,
                 ServerTick = _serverTick
             };
@@ -232,12 +241,16 @@ namespace Code.Server
                 {
                     if (otherPlayer == player)
                         continue;
-                    pj.UserName = otherPlayer.Name;
+                    var info = pj.InitialInfo;
+                    info.UserName = otherPlayer.Name;
+                    pj.InitialInfo = info;
                     pj.InitialPlayerState = otherPlayer.NetworkState;
                 }
                 else if (basePlayer is AIPlayer aiPlayer)
                 {
-                    pj.UserName = aiPlayer.Name;
+                    var info = pj.InitialInfo;
+                    info.UserName = aiPlayer.Name;
+                    pj.InitialInfo = info;
                     pj.InitialPlayerState = aiPlayer.NetworkState;
                 }
                 peer.Send(WritePacket(pj), DeliveryMethod.ReliableOrdered);
@@ -272,6 +285,11 @@ namespace Code.Server
             _netManager.SendToAll(WriteSerializable(PacketType.Shoot, sp), DeliveryMethod.ReliableUnordered);
         }
 
+        public void SendHardpointAction(ref HardpointActionPacket hap)
+        {
+            _netManager.SendToAll(WriteSerializable(PacketType.HardpointAction, hap), DeliveryMethod.ReliableOrdered);
+        }
+        
         public void SendPlayerDeath(byte playerId, byte killerId)
         {
             var pd = new PlayerDeathPacket { Id = playerId, KilledBy = killerId, ServerTick = _serverTick };

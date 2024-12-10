@@ -24,9 +24,10 @@ namespace Code.Client.Logic
         private int _sentPackets;
         private float _lastRecvTime;
         private int _packetsToSend;
+        private Vector2 _aimPosition;
         
         private Vector2 _positionError = Vector2.zero;
-        private float _rotationError = 0f;
+        // private float _rotationError = 0f;
         
         private Rigidbody2D _rewindRb;  // Rigidbody for the rewind scene
         
@@ -43,8 +44,16 @@ namespace Code.Client.Logic
         Dictionary<int, Rigidbody2D> remoteRbs = new Dictionary<int, Rigidbody2D>();
         
         
-        public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, string name, byte id) : base(manager, name, id)
+        public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, PlayerInitialInfo initialInfo) : base(manager, initialInfo.UserName, initialInfo.Id)
         {
+            // Add hardpoints
+            for (var index = 0; index < initialInfo.Hardpoints.Length; index++)
+            {
+                var slot = initialInfo.Hardpoints[index];
+                
+                Hardpoints.Add(new HardpointSlot(slot.Id, HardpointFactory.CreateHardpoint(slot.Type), new Vector2Int(slot.X, slot.Y)));
+            }
+            
             _playerManager = manager;
             _predictionPlayerStates = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
             _packets = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
@@ -56,7 +65,6 @@ namespace Code.Client.Logic
             _rewindRb = hi.GetComponent<Rigidbody2D>();
             
             // Move the rewind Rigidbody to the rewind scene
-            
             GameManager.Instance.StartCoroutine(MoveObjectToSceneAfterDelay(hi));
         }
         
@@ -75,7 +83,19 @@ namespace Code.Client.Logic
         {
             _view.OnHit(hit);
         }
-
+        
+        public override void OnHardpointAction(HardpointAction action)
+        {
+            _view.GetHardpointView(action.SlotId, out var hardpointView);
+            hardpointView?.OnHardpointAction(action.ActionCode);
+        }
+        
+        public Vector2 GetViewHardpointFirePosition(byte id)
+        {
+            _view.GetHardpointView(id, out var hardpointView);
+            return hardpointView?.GetFirePosition() ?? Position;
+        }
+        
         private void ApplyInputToRigidbody(Rigidbody2D rb, PlayerInputPacket command)
         {
             // Vector2 velocity = Vector2.zero;
@@ -331,6 +351,22 @@ namespace Code.Client.Logic
             _nextCommand.Thrust = velocity;
             _nextCommand.AngularThrust = rotation;
             
+            _nextCommand.NumHardpoints = (byte)Hardpoints.Count;
+            _nextCommand.Hardpoints = new HardpointInputState[Hardpoints.Count];
+
+            // update hardpoints
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                var slot = Hardpoints[i];
+                var hardpointView = _view.GetHardpointView(slot.Id);
+                _nextCommand.Hardpoints[i] = new HardpointInputState
+                {
+                    Id = slot.Id,
+                    Rotation = hardpointView.GetRotation(),
+                    Fire = fire
+                };
+            }
+            
             //Debug.Log($"[C] SetInput: {_nextCommand.Keys}");
             
             // UpdateLocal(dt);
@@ -387,7 +423,7 @@ namespace Code.Client.Logic
             _packetsToSend++;            
             
             _updateCount++;
-            if (_updateCount == 1)
+            if (_updateCount == 3)
             {
                 _updateCount = 0;
                 foreach (var t in _predictionPlayerStates)
@@ -404,6 +440,8 @@ namespace Code.Client.Logic
             var fire = Input.GetAxis("Fire1");
             var aim = Input.GetAxis("Fire2");
             var brake = Input.GetAxis("Jump");
+            
+            // apply aim to hardpoints, aim doesnt matter in the input  because it is not server authoritative
             
             Vector2 velocity = new Vector2(horz, vert);
             
@@ -436,6 +474,8 @@ namespace Code.Client.Logic
             // Clamp the torque input to [-1, 1]
             torque = Mathf.Clamp(torque, -1f, 1f);
 
+            _aimPosition = _clientLogic._camera.Camera.ScreenToWorldPoint(Input.mousePosition);
+            
             SetInput(velocity, torque, fire > 0f);
         }
 
@@ -444,14 +484,40 @@ namespace Code.Client.Logic
             ApplyInputToRigidbody(_view.Rb, command);
             // _rotation = command.Rotation;
             
-            if ((command.Keys & MovementKeys.Fire) != 0)
+            // deprecated
+            // if ((command.Keys & MovementKeys.Fire) != 0)
+            // {
+            //     if (_shootTimer.IsTimeElapsed)
+            //     {
+            //         _shootTimer.Reset();
+            //         // Shoot();
+            //         // _view.OnShoot(_view.transform.right);
+            //     }
+            // }
+            
+            // apply aim to hardpoints view
+            for (int i = 0; i < Hardpoints.Count; i++)
             {
-                if (_shootTimer.IsTimeElapsed)
+                var slot = Hardpoints[i];
+                _view.GetHardpointView(slot.Id, out var hardpointView);
+                hardpointView?.AimAt(_aimPosition);
+            }
+            
+            // Apply hardpoint actions and state
+            for (int i = 0; i < command.NumHardpoints; i++)
+            {
+                var hardpointState = command.Hardpoints[i];
+                // optimise this
+                var correspondingHardpoint = Hardpoints.Find(h => h.Id == hardpointState.Id);
+                if (correspondingHardpoint == null)
                 {
-                    _shootTimer.Reset();
-                    Shoot();
-                    _view.OnShoot(_view.transform.right);
+                    Debug.LogWarning($"Player {Id} received a command for an unknown hardpoint {hardpointState.Id}");
+                    continue;
                 }
+                correspondingHardpoint.Hardpoint.SetRotation(hardpointState.Rotation);
+
+                bool isFiring = hardpointState.Fire;
+                correspondingHardpoint.Hardpoint.SetTriggerHeld(isFiring);
             }
         }
         

@@ -9198,6 +9198,7 @@ MonoBehaviour:
   _gameHUD: {fileID: 1179676362}
   _loadingScreen: {fileID: 357880097}
   _pauseMenu: {fileID: 1430547055}
+  PlayerViewPrefabs: {fileID: 11400000, guid: 7f7eae0695d9b0e4da1b51152fce8bff, type: 2}
   PlayerViewPrefab: {fileID: 4804507857254071616, guid: da08e55069c0fb64bb66837943261bf8,
     type: 3}
   ShootEffectPrefab: {fileID: -4708360437246913611, guid: 1074f2e945873fe429ce817b90eafcf2,

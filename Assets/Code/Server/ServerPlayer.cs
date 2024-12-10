@@ -19,16 +19,44 @@ namespace Code.Server
         
         private float _tickTime = 0f;
         private bool _isFirstStateReceived = false;
-        private int _numExceeding;
         
         public int TickUpdateCount { get; private set; }
 
         public ServerPlayer(ServerPlayerManager playerManager, string name, NetPeer peer) : base(playerManager, name, (byte)peer.Id)
         {
+            // Add hardpoints
+            // for now this will set to a single cannon hardpoint for all players
+            Hardpoints.Add(new HardpointSlot(0, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, 20)));
+            Hardpoints.Add(new HardpointSlot(1, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, -20)));
+            
             _playerManager = playerManager;
             AssociatedPeer = peer;
             peer.Tag = this;  // Allows easy identification of this player through the peer
-            NetworkState = new PlayerState { Id = (byte)peer.Id };
+            
+            NetworkState = new PlayerState
+            {
+                Id = (byte)peer.Id, 
+                NumHardpoints = (byte)Hardpoints.Count, 
+                Hardpoints = new HardpointState[Hardpoints.Count]
+            };
+            
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                NetworkState.Hardpoints[i] = new HardpointState
+                {
+                    Id = Hardpoints[i].Id,
+                    Rotation = Hardpoints[i].Hardpoint.Rotation
+                };
+            }
+            
+            // Set the player's initial state
+            NetworkState.Position = Vector2.zero;
+            NetworkState.Velocity = Vector2.zero;
+            NetworkState.Rotation = 0f;
+            NetworkState.AngularVelocity = 0f;
+            NetworkState.Tick = 0;
+            NetworkState.Time = 0f;
+            NetworkState.Health = 100;
         }
         
         public void SetPlayerView(ServerPlayerView playerView)
@@ -86,7 +114,6 @@ namespace Code.Server
                     _tickTime = 0f;
                     TickUpdateCount = 0;
                     _lastTickDiff = (ushort)tickDiff;
-                    _numExceeding = 0;
                 }
             }
 
@@ -118,13 +145,32 @@ namespace Code.Server
                 _angularVelocity = _playerView.AngularVelocity;
                 // _rotation = command.Rotation;
 
-                if ((command.Keys & MovementKeys.Fire) != 0)
+                // deprecated for new hardpoint system
+                // if ((command.Keys & MovementKeys.Fire) != 0)
+                // {
+                //     if (_shootTimer.IsTimeElapsed)
+                //     {
+                //         _shootTimer.Reset();
+                //         Shoot();
+                //     }
+                // }
+                
+                // Apply hardpoint actions and state
+                for (int i = 0; i < command.NumHardpoints; i++)
                 {
-                    if (_shootTimer.IsTimeElapsed)
+                    var hardpointState = command.Hardpoints[i];
+                    // optimise this
+                    var correspondingHardpoint = Hardpoints.Find(h => h.Id == hardpointState.Id);
+                    if (correspondingHardpoint == null)
                     {
-                        _shootTimer.Reset();
-                        Shoot();
+                        Debug.LogWarning($"Player {Id} received a command for an unknown hardpoint {hardpointState.Id}");
+                        continue;
                     }
+                    correspondingHardpoint.Hardpoint.SetRotation(hardpointState.Rotation);
+
+                    Debug.Log($"Player {Id} received a command for hardpoint {hardpointState.Id} with rotation {hardpointState.Rotation}, fire {hardpointState.Fire}");
+                    bool isFiring = hardpointState.Fire;
+                    correspondingHardpoint.Hardpoint.SetTriggerHeld(isFiring);
                 }
             }
             
@@ -171,6 +217,12 @@ namespace Code.Server
             NetworkState.Tick = LastProcessedCommandId;
             NetworkState.Time = Time.time;
             NetworkState.Health = _health;
+            
+            // Update the hardpoints
+            for (int i = 0; i < Hardpoints.Count; i++)
+            {
+                NetworkState.Hardpoints[i].Rotation = Hardpoints[i].Hardpoint.Rotation;
+            }
             
             // Debug.Log($"Player {Id} updated to tick {NetworkState.Tick} at {NetworkState.Time}");
             // Draw a cross at the player's position for visual debugging

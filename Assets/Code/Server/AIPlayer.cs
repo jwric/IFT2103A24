@@ -18,7 +18,7 @@ namespace Code.Server
         
         private float _tickTime = 0f;
         private bool _isFirstStateReceived = false;
-        private int _numExceeding;
+        // private int _numExceeding;
         
         private BasePlayer _lastDamager = null;
         
@@ -91,7 +91,7 @@ namespace Code.Server
                     _tickTime = 0f;
                     TickUpdateCount = 0;
                     _lastTickDiff = (ushort)tickDiff;
-                    _numExceeding = 0;
+                    // _numExceeding = 0;
                 }
             }
 
@@ -117,14 +117,15 @@ namespace Code.Server
                 _rotation = _playerView.Rotation;
                 _angularVelocity = _playerView.AngularVelocity;
 
-                if ((command.Keys & MovementKeys.Fire) != 0)
-                {
-                    if (_shootTimer.IsTimeElapsed)
-                    {
-                        _shootTimer.Reset();
-                        Shoot();
-                    }
-                }
+                // deprecated code
+                // if ((command.Keys & MovementKeys.Fire) != 0)
+                // {
+                //     if (_shootTimer.IsTimeElapsed)
+                //     {
+                //         _shootTimer.Reset();
+                //         Shoot();
+                //     }
+                // }
             }
             
         }
@@ -227,7 +228,21 @@ namespace Code.Server
 
             var angleDiff = GetAngleDifference(_rotation * Mathf.Rad2Deg, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
             if (Mathf.Abs(angleDiff) < 10f && distanceToTarget <= _attackRange)
-                SimulateAttack();
+            {
+                // Simlate attack by firing the hardpoints
+                foreach (var slot in Hardpoints)
+                {
+                    slot.Hardpoint.SetTriggerHeld(true);
+                }
+            }
+            else
+            {
+                // Stop firing
+                foreach (var slot in Hardpoints)
+                {
+                    slot.Hardpoint.SetTriggerHeld(false);
+                }
+            }
 
             if (distanceToTarget > _attackRange + safeDistance)
             {
@@ -280,14 +295,15 @@ namespace Code.Server
             return difference - 180;
         }
         
-        private void SimulateAttack()
-        {
-            if (_shootTimer.IsTimeElapsed)
-            {
-                _shootTimer.Reset();
-                Shoot();
-            }
-        }
+        // private void SimulateAttack()
+        // {
+        //     if (_shootTimer.IsTimeElapsed)
+        //     {
+        //         _shootTimer.Reset();
+        //         // fire the hardpoints
+        //
+        //     }
+        // }
 
         private BasePlayer GetClosestPlayerWithinRange(float range)
         {
