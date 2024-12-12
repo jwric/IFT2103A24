@@ -39,6 +39,18 @@ namespace Code.Server
             _logicTimer.Start();
         }
 
+        public int AllocatePlayerId()
+        {
+            // find first free id
+            for (byte i = 0; i < MaxPlayers; i++)
+            {
+                if (_playerManager.GetPlayer(i) == null)
+                    return i;
+            }
+            
+            return -1;
+        }
+
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -80,7 +92,10 @@ namespace Code.Server
 
         private void AddBot(Vector2 position)
         {
-            var player = new AIPlayer(_playerManager, "Bot " + _playerManager.Count, (byte)_playerManager.Count, _serverTick - 1);
+            var id = AllocatePlayerId();
+            if (id == -1)
+                return;
+            var player = new AIPlayer(_playerManager, "Bot " + _playerManager.Count, (byte)id, _serverTick - 1);
             var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
             _playerManager.AddBot(player, playerView);
 
@@ -211,7 +226,19 @@ namespace Code.Server
         private void OnJoinReceived(JoinPacket joinPacket, NetPeer peer)
         {
             Debug.Log("[S] Join packet received: " + joinPacket.UserName);
-            var player = new ServerPlayer(_playerManager, joinPacket.UserName, peer);
+            if (_playerManager.Count >= MaxPlayers)
+            {
+                Debug.LogWarning("Server is full");
+                return;
+            }
+            var id = AllocatePlayerId();
+            if (id == -1)
+            {
+                Debug.LogWarning("No free player slots");
+                return;
+            }
+            
+            var player = new ServerPlayer(_playerManager, joinPacket.UserName, (byte)id, peer);
             var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
             _playerManager.AddPlayer(player, playerView);
 
@@ -307,10 +334,10 @@ namespace Code.Server
 
             if (peer.Tag != null)
             {
-                byte playerId = (byte)peer.Id;
+                byte playerId = ((ServerPlayer) peer.Tag).Id;
                 if (_playerManager.RemovePlayer(playerId))
                 {
-                    var plp = new PlayerLeavedPacket { Id = (byte)peer.Id };
+                    var plp = new PlayerLeavedPacket { Id = playerId };
                     _netManager.SendToAll(WritePacket(plp), DeliveryMethod.ReliableOrdered);
                 }
             }

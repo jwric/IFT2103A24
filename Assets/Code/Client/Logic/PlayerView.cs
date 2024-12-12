@@ -10,6 +10,7 @@ namespace Code.Client.Logic
     [RequireComponent(typeof(Rigidbody2D)), RequireComponent(typeof(Collider2D))]
     public class PlayerView : MonoBehaviour, IPlayerView
     {
+        [SerializeField] private Rigidbody2D _rbView;
         [SerializeField] private TextMesh _name;
         
         private Rigidbody2D _rb;
@@ -18,6 +19,9 @@ namespace Code.Client.Logic
         public Rigidbody2D Rb => _rb;
 
         private readonly Dictionary<byte, IHardpointView> _hardpoints = new();
+        
+        [SerializeField]
+        private OmnidirectionalThrusterController _thrusterController;
         
         // [SerializeField]
         // private HardpointView _hardpointView;
@@ -29,6 +33,10 @@ namespace Code.Client.Logic
             var obj = Instantiate(prefab, player.Position, rot);
             obj._name.text = player.Name;
             obj.SetHardpoints(player.Hardpoints);
+            
+            // instantiate the rigidbodyView
+            // obj._rbView = Instantiate(prefab._rbView, null);
+            
             return obj;
         }
 
@@ -68,6 +76,9 @@ namespace Code.Client.Logic
         {
             _rb = GetComponent<Rigidbody2D>();
             _collider = GetComponent<Collider2D>();
+            
+            // _rb.simulated = false;
+            // _collider.enabled = false;
         }
         
         public void OnHit(HitInfo hitInfo)
@@ -95,6 +106,11 @@ namespace Code.Client.Logic
             enabled = true;
         }
 
+        public void ApplyThrust(Vector2 thrust, float torque)
+        {
+            _thrusterController.ApplyThrust(thrust, torque, _rb.rotation);
+        }
+        
         public void Die()
         {
             enabled = false;            

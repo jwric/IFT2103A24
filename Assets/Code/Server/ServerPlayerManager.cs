@@ -58,6 +58,18 @@ namespace Code.Server
             }
         }
         
+        public BasePlayer GetPlayer(byte id)
+        {
+            for (int i = 0; i < _playersCount; i++)
+            {
+                if (_players[i].Player.Id == id)
+                {
+                    return _players[i].Player;
+                }
+            }
+            return null;
+        }
+        
         public override void OnShoot(BasePlayer from, byte hardpointId, Vector2 to, BasePlayer hit, byte damage)
         {
             if (from is ServerPlayer serverPlayer)

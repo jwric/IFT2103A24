@@ -109,6 +109,10 @@ namespace Code.Client.Logic
             // Physics2D.Simulate(Time.fixedDeltaTime);
             OnLogicUpdate();
             Physics2D.Simulate(Time.fixedDeltaTime);
+            _rewindScene.GetPhysicsScene2D().Simulate(Time.fixedDeltaTime);
+            if (_playerManager.OurPlayer != null)
+                _playerManager.OurPlayer.StateSnapshot();
+            _camera.ManualUpdate(Time.fixedDeltaTime);
         }
         
         private void OnPlayerJoined(PlayerJoinedPacket packet)

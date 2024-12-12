@@ -1,20 +1,26 @@
 using Code.Client.Managers;
 using Code.Shared;
 using UnityEngine;
-using HardpointSlot = Code.Shared.HardpointSlot;
+using System;
 
 namespace Code.Client.Logic
 {
     public class RemotePlayer : BasePlayer
     {
         private PlayerView _view;
-        
+
         private readonly LiteRingBuffer<PlayerState> _buffer = new(30);
         private float _bufferTime;
         private float _interpolationTimer;
         private const float TargetBufferTime = 0.1f;
 
-        public RemotePlayer(ClientPlayerManager manager, string name, PlayerJoinedPacket pjPacket) : base(manager, name, pjPacket.InitialPlayerState.Id)
+        // Store last frame's state for acceleration calculation
+        private Vector2 _lastVelocity;
+        private float _lastAngularVelocity;
+        private bool _hasLastFrameState = false;
+
+        public RemotePlayer(ClientPlayerManager manager, string name, PlayerJoinedPacket pjPacket) 
+            : base(manager, name, pjPacket.InitialPlayerState.Id)
         {
             _position = pjPacket.InitialPlayerState.Position;
             _health = pjPacket.InitialInfo.Health;
@@ -25,12 +31,14 @@ namespace Code.Client.Logic
             for (var index = 0; index < pjPacket.InitialInfo.Hardpoints.Length; index++)
             {
                 var slot = pjPacket.InitialInfo.Hardpoints[index];
-                var state = pjPacket.InitialPlayerState.Hardpoints[index];
+                // var state = pjPacket.InitialPlayerState.Hardpoints[index];
 
                 var hardpoint = HardpointFactory.CreateHardpoint(slot.Type);
-                hardpoint.SetRotation(state.Rotation);
+                // hardpoint.SetRotation(state.Rotation);
                 Hardpoints.Add(new HardpointSlot(slot.Id, hardpoint, new Vector2Int(slot.X, slot.Y)));
             }
+            
+            // set kinematic
         }
         
         public Transform Transform => _view.transform; // TODO: Remove this
@@ -45,11 +53,13 @@ namespace Code.Client.Logic
             _buffer.FastClear();
             _view.Spawn(position, 0f);
             base.Spawn(position);
+            
+            _view.Rb.isKinematic = true;
         }
 
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
-            // Do nothing
+            // Do nothing for remote players
         }
         
         public Vector2 GetViewHardpointFirePosition(byte id)
@@ -57,11 +67,6 @@ namespace Code.Client.Logic
             _view.GetHardpointView(id, out var hardpointView);
             return hardpointView?.GetFirePosition() ?? Position;
         }
-
-        // public void OnShoot(Vector2 target)
-        // {
-        //     // _view.OnShoot(target);
-        // }
 
         public override void OnHardpointAction(HardpointAction action)
         {
@@ -102,15 +107,16 @@ namespace Code.Client.Logic
                 if (_buffer.Count == 1)
                 {
                     var singleData = _buffer[0];
-                    _position = Vector2.Lerp(_position, singleData.Position, delta * 0.5f); // Reduced speed
-                    _rotation = Mathf.Lerp(_rotation, singleData.Rotation, delta * 0.5f); // Reduced speed
-                    _velocity = Vector2.Lerp(_velocity, singleData.Velocity, delta * 0.5f); // Reduced speed
-                    _angularVelocity = Mathf.Lerp(_angularVelocity, singleData.AngularVelocity, delta * 0.5f); // Reduced speed
-                    
+                    _position = Vector2.Lerp(_position, singleData.Position, delta * 0.5f); 
+                    _rotation = Mathf.Lerp(_rotation, singleData.Rotation, delta * 0.5f); 
+                    _velocity = Vector2.Lerp(_velocity, singleData.Velocity, delta * 0.5f); 
+                    _angularVelocity = Mathf.Lerp(_angularVelocity, singleData.AngularVelocity, delta * 0.5f); 
+
                     // update hardpoints
                     for (int i = 0; i < Hardpoints.Count; i++)
                     {
-                        Hardpoints[i].Hardpoint.SetRotation(Mathf.LerpAngle(Hardpoints[i].Hardpoint.Rotation, singleData.Hardpoints[i].Rotation, delta * 0.5f));
+                        Hardpoints[i].Hardpoint.SetRotation(
+                            Mathf.LerpAngle(Hardpoints[i].Hardpoint.Rotation, singleData.Hardpoints[i].Rotation, delta * 0.5f));
                     }
                 }
                 return;
@@ -124,7 +130,6 @@ namespace Code.Client.Logic
 
             float lerpT = _interpolationTimer / stateDeltaTime;
             _position = Vector2.Lerp(dataA.Position, dataB.Position, lerpT);
-            // _position = dataB.Position; // No interpolation for position
 
             float startRotation = dataA.Rotation;
             float endRotation = dataB.Rotation;
@@ -138,16 +143,16 @@ namespace Code.Client.Logic
             _rotation = Mathf.Lerp(startRotation, endRotation, lerpT);
             
             _velocity = Vector2.Lerp(dataA.Velocity, dataB.Velocity, lerpT);
-            
             _angularVelocity = Mathf.Lerp(dataA.AngularVelocity, dataB.AngularVelocity, lerpT);
 
             // update hardpoints
             for (int i = 0; i < Hardpoints.Count; i++)
             {
-                Hardpoints[i].Hardpoint.SetRotation(Mathf.LerpAngle(dataA.Hardpoints[i].Rotation, dataB.Hardpoints[i].Rotation, lerpT));
+                Hardpoints[i].Hardpoint.SetRotation(
+                    Mathf.LerpAngle(dataA.Hardpoints[i].Rotation, dataB.Hardpoints[i].Rotation, lerpT));
             }
             
-            _interpolationTimer += delta;
+            _interpolationTimer += delta; // or delta if that's the frame delta
 
             if (_interpolationTimer >= stateDeltaTime)
             {
@@ -164,23 +169,6 @@ namespace Code.Client.Logic
 
         public void OnPlayerState(PlayerState state)
         {
-            // Skip outdated states
-            // if (_buffer.Count > 0 && NetworkGeneral.SeqDiff(state.Tick, _buffer.Last.Tick) <= 0)
-            //     return;
-
-            // Determine if time adjustment is needed
-            float timeDiff = state.Time - (_buffer.Count > 0 ? _buffer.Last.Time : 0f);
-            // if (timeDiff < LogicTimerClient.FixedDelta * 0.5f)
-            // {
-            //     Debug.LogWarning($"Skipping outdated state with diff {timeDiff}");
-            //     return;
-            // }
-
-            if (timeDiff < 0)
-            {
-                return;
-            }
-
             if (!GameManager.Instance.Settings.EntityInterpolation)
             {
                 _position = state.Position;
@@ -196,10 +184,15 @@ namespace Code.Client.Logic
             }
             
             _health = state.Health;
-
+            
+            float timeDiff = state.Time - (_buffer.Count > 0 ? _buffer.Last.Time : 0f);
+            if (timeDiff < 0)
+            {
+                return;
+            }
             
             _bufferTime += timeDiff;
-            // Prevent excessive buffering by dynamically adjusting the buffer
+
             if (_bufferTime > TargetBufferTime * 1.5f)
             {
                 int i = 0;
@@ -220,6 +213,45 @@ namespace Code.Client.Logic
         {
             UpdatePosition(delta);
             UpdateView();
+            UpdateThrusterVisualization(delta);
+        }
+
+        private void UpdateThrusterVisualization(float delta)
+        {
+            // We need to guess forces from velocity changes:
+            if (_view == null || _view.Rb == null || _view.Rb.mass <= 0) return;
+            
+            float mass = _view.Rb.mass;
+            float inertia = _view.Rb.inertia; // Moment of inertia for 2D rigidbody
+
+            if (_hasLastFrameState)
+            {
+                // Compute linear acceleration
+                Vector2 dv = _velocity - _lastVelocity;
+                Vector2 acceleration = dv / delta;
+
+                // Compute angular acceleration
+                float dOmega = _angularVelocity - _lastAngularVelocity;
+                float angularAcceleration = dOmega / delta;
+
+                // Net force and torque
+                Vector2 netForce = mass * acceleration;
+                float netTorque = inertia * angularAcceleration;
+                
+                // If there's known external damping or drag, subtract it here
+                // Example: netForce -= drag * velocity, etc.
+                netForce -= _view.Rb.drag * _velocity;
+                netTorque -= _view.Rb.angularDrag * _angularVelocity;
+
+                // Now we have a "desired" localForce and netTorque similar to what the local player ApplyThrust would produce.
+                // We'll reuse the logic that a local player would have: call ApplyThrust on the OmnidirectionalThrusterController
+                // with these derived forces.
+                _view.ApplyThrust(netForce, netTorque);
+            }
+
+            _lastVelocity = _velocity;
+            _lastAngularVelocity = _angularVelocity;
+            _hasLastFrameState = true;
         }
 
         public void Die()

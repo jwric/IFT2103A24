@@ -17,6 +17,8 @@ namespace Code.Server
         public float Rotation => _rb.rotation * Mathf.Deg2Rad;
         public float AngularVelocity => _rb.angularVelocity;
         
+        public Rigidbody2D Rb => _rb;
+        
         public static ServerPlayerView Create(ServerPlayerView prefab, BasePlayer player)
         {
             Quaternion rot = Quaternion.Euler(0f, player.Rotation, 0f);

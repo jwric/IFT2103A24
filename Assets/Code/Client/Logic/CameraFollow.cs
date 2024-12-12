@@ -16,7 +16,7 @@ namespace Code.Client
             _camera = GetComponent<Camera>();
         }
         
-        private void LateUpdate()
+        public void ManualUpdate(float delta)
         {
             // if (!target && _camera.enabled)
             // {
@@ -29,7 +29,7 @@ namespace Code.Client
 
             
             Vector3 desiredPosition = target ? new Vector3(target.position.x, target.position.y, -10) : Vector3.zero;
-            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
+            Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * delta);
             transform.position = new Vector3(smoothedPosition.x, smoothedPosition.y, -10);
         }
     }

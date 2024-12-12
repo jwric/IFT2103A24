@@ -22,12 +22,12 @@ namespace Code.Server
         
         public int TickUpdateCount { get; private set; }
 
-        public ServerPlayer(ServerPlayerManager playerManager, string name, NetPeer peer) : base(playerManager, name, (byte)peer.Id)
+        public ServerPlayer(ServerPlayerManager playerManager, string name, byte id, NetPeer peer) : base(playerManager, name, id)
         {
             // Add hardpoints
             // for now this will set to a single cannon hardpoint for all players
-            Hardpoints.Add(new HardpointSlot(0, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, 20)));
-            Hardpoints.Add(new HardpointSlot(1, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, -20)));
+            Hardpoints.Add(new HardpointSlot(0, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, 0)));
+            // Hardpoints.Add(new HardpointSlot(1, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, -20)));
             
             _playerManager = playerManager;
             AssociatedPeer = peer;
@@ -35,7 +35,7 @@ namespace Code.Server
             
             NetworkState = new PlayerState
             {
-                Id = (byte)peer.Id, 
+                Id = Id, 
                 NumHardpoints = (byte)Hardpoints.Count, 
                 Hardpoints = new HardpointState[Hardpoints.Count]
             };
@@ -70,8 +70,6 @@ namespace Code.Server
         }
 
 
-        private bool test = false;
-
         public override void Spawn(Vector2 position)
         {
             base.Spawn(position);
@@ -85,7 +83,6 @@ namespace Code.Server
 
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
-            test = true;
             // Ensure only new commands are processed
             if (NetworkGeneral.SeqDiff(command.Id, LastProcessedCommandId) <= 0)
             {
@@ -93,7 +90,8 @@ namespace Code.Server
                 // Debug.Log($"Player {Id} received an old command {command.Id} (last processed {LastProcessedCommandId})");
                 return;
             }
-
+            
+            
             if (!_isFirstStateReceived)
             {
                 _isFirstStateReceived = true;
@@ -112,7 +110,10 @@ namespace Code.Server
                 if (tickDiff > 0)
                 {
                     _tickTime = 0f;
+                    Debug.LogWarning($"Player {Id} sent too many commands in a single tick: {TickUpdateCount}");
                     TickUpdateCount = 0;
+                    // log how many commands were received from player in the last tick
+                    Debug.Log($"Player {Id} received {tickDiff} commands in the last tick");
                     _lastTickDiff = (ushort)tickDiff;
                 }
             }
@@ -138,11 +139,12 @@ namespace Code.Server
                 _playerView.Rotate(command.AngularThrust * _angularSpeed);
                 // _playerView.SetRotation(command.Rotation);
 
+                // disable other player's physics
 
-                _position = _playerView.Position;
-                _velocity = _playerView.Velocity;
-                _rotation = _playerView.Rotation;
-                _angularVelocity = _playerView.AngularVelocity;
+                // _position = _playerView.Position;
+                // _velocity = _playerView.Velocity;
+                // _rotation = _playerView.Rotation;
+                // _angularVelocity = _playerView.AngularVelocity;
                 // _rotation = command.Rotation;
 
                 // deprecated for new hardpoint system
@@ -168,7 +170,6 @@ namespace Code.Server
                     }
                     correspondingHardpoint.Hardpoint.SetRotation(hardpointState.Rotation);
 
-                    Debug.Log($"Player {Id} received a command for hardpoint {hardpointState.Id} with rotation {hardpointState.Rotation}, fire {hardpointState.Fire}");
                     bool isFiring = hardpointState.Fire;
                     correspondingHardpoint.Hardpoint.SetTriggerHeld(isFiring);
                 }
@@ -176,17 +177,6 @@ namespace Code.Server
             
         }
 
-        // ChangeState method to set position and rotation
-        public void ChangeState(Vector2 newPosition, bool applyImmediately = false)
-        {
-            _position = newPosition;
-
-            if (applyImmediately)
-            {
-                NetworkState.Position = _position;
-            }
-        }
-        
         // Updates the player’s state and prepares it for network synchronization
         public override void Update(float delta)
         {
@@ -209,11 +199,18 @@ namespace Code.Server
             //         _playerView.Move(velocity.normalized * _speed);
             // }
             
+            // set the player's position, rotation, and velocity to the player view
+            _position = _playerView.Position;
+            _rotation = _playerView.Rotation;
+            _velocity = _playerView.Velocity;
+            _angularVelocity = _playerView.AngularVelocity;
+            
+            
             // Update the network state with the player's latest position, rotation, and tick information
-            NetworkState.Position = _playerView.Position;
-            NetworkState.Velocity = _playerView.Velocity;
-            NetworkState.Rotation = _playerView.Rotation;
-            NetworkState.AngularVelocity = _playerView.AngularVelocity;
+            NetworkState.Position = _position;
+            NetworkState.Velocity = _velocity;
+            NetworkState.Rotation = _rotation;
+            NetworkState.AngularVelocity = _angularVelocity;
             NetworkState.Tick = LastProcessedCommandId;
             NetworkState.Time = Time.time;
             NetworkState.Health = _health;
@@ -226,8 +223,7 @@ namespace Code.Server
             
             // Debug.Log($"Player {Id} updated to tick {NetworkState.Tick} at {NetworkState.Time}");
             // Draw a cross at the player's position for visual debugging
-            DrawDebugCross(Position, 0.1f, test ? Color.green : Color.white);
-            test = false;
+            DrawDebugCross(Position, 0.1f, Color.white);
         }
 
         public override void FrameUpdate(float delta)

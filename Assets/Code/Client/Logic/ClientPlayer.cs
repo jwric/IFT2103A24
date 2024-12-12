@@ -27,7 +27,8 @@ namespace Code.Client.Logic
         private Vector2 _aimPosition;
         
         private Vector2 _positionError = Vector2.zero;
-        // private float _rotationError = 0f;
+        private float _rotationError = 0f;
+        private bool correctionSmoothing = false;
         
         private Rigidbody2D _rewindRb;  // Rigidbody for the rewind scene
         
@@ -42,7 +43,10 @@ namespace Code.Client.Logic
         public PhysicsScene2D RewindPhysicsScene { get; set; }
         
         Dictionary<int, Rigidbody2D> remoteRbs = new Dictionary<int, Rigidbody2D>();
-        
+
+
+        public int StatesReceivedThisClientTick = 0;
+        public int ClientTicksWithoutServerState = 0;
         
         public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, PlayerInitialInfo initialInfo) : base(manager, initialInfo.UserName, initialInfo.Id)
         {
@@ -126,8 +130,8 @@ namespace Code.Client.Logic
         
         private void RewindAndReapplyPredictions(PlayerState ourState, bool onlyRotation = false)
         {
-            // Vector2 prevPosition = _view.Rb.position + _positionError;
-            // float prevRotation = _view.Rb.rotation + _rotationError;
+            Vector2 prevPosition = _view.Rb.position + _positionError;
+            float prevRotation = _view.Rb.rotation + _rotationError;
             
             
             // SyncWithServerState(_view.Rb, ourState);
@@ -168,11 +172,11 @@ namespace Code.Client.Logic
                     }
                 }
             }
-            
+            RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
+
             // Apply predictions in the rewind scene
             for (var index = 0; index < _predictionPlayerStates.Count; index++)
             {
-                RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
                 var input = _predictionPlayerStates[index];
                 ref var state = ref _clientPlayerStates[index];
                 state.Position = _rewindRb.position;
@@ -180,9 +184,8 @@ namespace Code.Client.Logic
                 state.Velocity = _rewindRb.velocity;
                 state.AngularVelocity = _rewindRb.angularVelocity;
                 ApplyInputToRigidbody(_rewindRb, input);
+                RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
             }
-            RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
-
             
             List<int> toRemove = new List<int>();
             // Destroy the remote objects that are no longer in the game
@@ -219,16 +222,16 @@ namespace Code.Client.Logic
                 }
             }
             
-            // if ((prevPosition - _rewindRb.position).sqrMagnitude >= 4.0f)
-            // {
-            //     _positionError = Vector2.zero;
-            //     _rotationError = 0f;
-            // }
-            // else
-            // {
-            //     _positionError = _rewindRb.position - prevPosition;
-            //     _rotationError = _rewindRb.rotation - prevRotation;
-            // }
+            if ((prevPosition - _view.Rb.position).sqrMagnitude >= 4.0f)
+            {
+                _positionError = Vector2.zero;
+                _rotationError = 0f;
+            }
+            else
+            {
+                _positionError = prevPosition - _view.Rb.position;
+                _rotationError = prevRotation - _view.Rb.rotation;
+            }
             
         }
         
@@ -244,6 +247,12 @@ namespace Code.Client.Logic
                 serverState.LastProcessedCommand == _lastServerState.LastProcessedCommand)
                 return;
             
+            StatesReceivedThisClientTick++;
+            var tickGap = ClientTicksWithoutServerState;
+            ClientTicksWithoutServerState = 0;
+            Debug.Log($"[C] Received server state: tickGap: {tickGap}");
+            // tick gap should be multiple of 3
+
             _health = ourState.Health;
             
             // if (Input.GetKey(KeyCode.P))
@@ -293,8 +302,9 @@ namespace Code.Client.Logic
                 
                 Vector2 positionError = ourState.Position - _clientPlayerStates.First.Position;
                 float rotationError = ourState.Rotation - _clientPlayerStates.First.Rotation;
-                if (positionError.sqrMagnitude > 0.1f || Mathf.Abs(rotationError) > 5f*Mathf.Deg2Rad)
+                if (positionError.sqrMagnitude > 0.0000001f || Mathf.Abs(rotationError) > 0.00001f*Mathf.Deg2Rad)
                 {
+                    Debug.Log($"[C] Position error: {positionError.sqrMagnitude}, Rotation error: {rotationError}");
                     RewindAndReapplyPredictions(ourState, false);
                 }
             }
@@ -374,6 +384,21 @@ namespace Code.Client.Logic
 
         public override void Update(float delta)
         {
+            var ticksThisFrame = StatesReceivedThisClientTick;
+            StatesReceivedThisClientTick = 0;
+            ClientTicksWithoutServerState++;
+
+            // Debug.Log($"[C] Ticks this frame: {ticksThisFrame}");
+            
+            if (Input.GetKey(KeyCode.R))
+            {
+                correctionSmoothing = false;
+            }
+            else
+            {
+                correctionSmoothing = true;
+            }
+            
             LastPosition = _view.Rb.position;
             LastRotation = _view.Rb.rotation;
             
@@ -382,9 +407,21 @@ namespace Code.Client.Logic
             _rotation = _view.Rb.rotation * Mathf.Deg2Rad;
             _angularVelocity = _view.Rb.angularVelocity;
             
-            // _positionError *= 0.9f;
-            // _rotationError = Quaternion.Slerp(Quaternion.Euler(0f, 0f, _rotationError), Quaternion.identity, 0.1f).eulerAngles.z;
             
+            // if (correctionSmoothing)
+            // {
+            //     _positionError = Vector2.Lerp(_positionError, Vector2.zero, 0.1f);
+            //     _rotationError = Mathf.Lerp(_rotationError, 0f, 0.1f);
+            // }
+            // else 
+            // {
+            //     _positionError = Vector2.zero;
+            //     _rotationError = 0f;
+            // }
+            //
+            // _view.transform.position = _view.Rb.position + _positionError;
+            // _view.transform.rotation = Quaternion.Euler(0, 0, _view.Rb.rotation + _rotationError);
+
             // _view.UpdateView(_view.Rb.position + _positionError, _view.Rb.rotation + _rotationError);
             
             _nextCommand.Id = (ushort)((_nextCommand.Id + 1) % NetworkGeneral.MaxGameSequence);
@@ -406,17 +443,7 @@ namespace Code.Client.Logic
             }
             _predictionPlayerStates.Add(_nextCommand);
             
-            PlayerState currentState = new PlayerState
-            {
-                Position = _view.Rb.position,
-                Rotation = _view.Rb.rotation * Mathf.Deg2Rad,
-                Velocity = _view.Rb.velocity,
-                AngularVelocity = _view.Rb.angularVelocity,
-                Tick = _lastServerState.Tick,
-                Time = Time.fixedTime,
-            };
-            _clientPlayerStates.Add(currentState);
-            
+
             _tickTime += delta;
             
             _sentPackets++;
@@ -431,6 +458,20 @@ namespace Code.Client.Logic
             }
             
             base.Update(delta);
+        }
+
+        public void StateSnapshot()
+        {
+            PlayerState currentState = new PlayerState
+            {
+                Position = _view.Rb.position,
+                Rotation = _view.Rb.rotation * Mathf.Deg2Rad,
+                Velocity = _view.Rb.velocity,
+                AngularVelocity = _view.Rb.angularVelocity,
+                Tick = _lastServerState.Tick,
+                Time = Time.fixedTime,
+            };
+            _clientPlayerStates.Add(currentState);
         }
 
         public override void FrameUpdate(float delta)
@@ -482,6 +523,8 @@ namespace Code.Client.Logic
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
             ApplyInputToRigidbody(_view.Rb, command);
+            // apply input to the view
+            _view.ApplyThrust(command.Thrust * _speed, command.AngularThrust * _angularSpeed);
             // _rotation = command.Rotation;
             
             // deprecated
