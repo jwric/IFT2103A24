@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PlayerPrefab: {fileID: 4804507857254071616, guid: da08e55069c0fb64bb66837943261bf8,
     type: 3}
+  EjectedShellPrefab: {fileID: 8719231081306538689, guid: 9a3213aaaa18c9e40a143681c1e57fd4,
+    type: 3}
   LargeThrusterSmokePrefab: {fileID: -4729589092165751414, guid: 83df60e775d57fe4f846b8b98b372320,
     type: 3}
   ThrusterSmokePrefab: {fileID: -4729589092165751414, guid: c81cdeb76d1be694db7a79de331610ff,

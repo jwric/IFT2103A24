@@ -50,7 +50,7 @@ namespace Code.Client.Logic
             var prefabDb = gm.PlayerViewPrefabs;
             foreach (var slot in hardpoints)
             {
-                var hardpointView = prefabDb.InstantiateHardpointPrefab(slot.Hardpoint.Type, transform, slot.Position);
+                var hardpointView = prefabDb.InstantiateHardpointPrefab(slot.Hardpoint.Type, transform, slot.Position, _objectPoolManager);
                 _hardpoints.Add(slot.Id, hardpointView);
             }
         }

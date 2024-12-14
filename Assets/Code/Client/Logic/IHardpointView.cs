@@ -5,7 +5,7 @@ namespace Code.Client.Logic
 {
     public interface IHardpointView
     {
-        void Initialize(Transform parent, Vector2Int position);
+        void Initialize(Transform parent, Vector2Int position, ObjectPoolManager objectPoolManager);
         
         void AimAt(Vector2 target, float dt);
 

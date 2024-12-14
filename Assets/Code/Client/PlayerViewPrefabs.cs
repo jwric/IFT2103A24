@@ -11,6 +11,8 @@ namespace Code.Client
     {
         public PlayerView PlayerPrefab;
         
+        public EjectedShell EjectedShellPrefab;
+        
         public PooledParticleSystem LargeThrusterSmokePrefab;
         public PooledParticleSystem ThrusterSmokePrefab;
         public PooledParticleSystem LargeThrusterFirePrefab;
@@ -18,10 +20,12 @@ namespace Code.Client
 
         public void SetupObjectPoolManager(ref ObjectPoolManager objectPoolManager)
         {
-            objectPoolManager.AddPool<PooledParticleSystem>("smallThrusterSmoke", ThrusterSmokePrefab, 100);
-            objectPoolManager.AddPool<PooledParticleSystem>("smallThrusterFire", ThrusterFirePrefab, 100);
-            objectPoolManager.AddPool<PooledParticleSystem>("largeThrusterSmoke", LargeThrusterSmokePrefab, 100);
-            objectPoolManager.AddPool<PooledParticleSystem>("largeThrusterFire", LargeThrusterFirePrefab, 100);
+            objectPoolManager.AddPool("smallThrusterSmoke", ThrusterSmokePrefab, 100);
+            objectPoolManager.AddPool("smallThrusterFire", ThrusterFirePrefab, 100);
+            objectPoolManager.AddPool("largeThrusterSmoke", LargeThrusterSmokePrefab, 100);
+            objectPoolManager.AddPool("largeThrusterFire", LargeThrusterFirePrefab, 100);
+            
+            objectPoolManager.AddPool("ejectedShell", EjectedShellPrefab, 20);
         }
         
         [Serializable]
@@ -55,7 +59,7 @@ namespace Code.Client
         /// <summary>
         /// Instantiates a prefab and retrieves its IHardpointView interface.
         /// </summary>
-        public IHardpointView InstantiateHardpointPrefab(HardpointType type, Transform parent, Vector2Int position)
+        public IHardpointView InstantiateHardpointPrefab(HardpointType type, Transform parent, Vector2Int position, ObjectPoolManager objectPoolManager)
         {
             if (!_hardpointPrefabs.TryGetValue(type, out var prefab) || prefab == null)
             {
@@ -74,7 +78,7 @@ namespace Code.Client
             }
 
             // Call Initialize on the IHardpointView implementation
-            hardpointView.Initialize(parent, position);
+            hardpointView.Initialize(parent, position, objectPoolManager);
             return hardpointView;
         }
     }

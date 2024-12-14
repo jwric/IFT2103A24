@@ -2,6 +2,8 @@
 using System.Collections;
 using Code.Shared;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using Random = UnityEngine.Random;
 
 namespace Code.Client.Logic
 {
@@ -11,12 +13,20 @@ namespace Code.Client.Logic
         Medium,
         Large
     }
-    
+
+    public enum ThrusterState
+    {
+        Idle,
+        Starting,
+        Looping,
+        Stopping
+    }
+
     public class ThrusterView : MonoBehaviour
     {
         [SerializeField]
         private ThrusterSize _size;
-        
+
         // sounds
         [SerializeField]
         private AudioClip[] _thrustLoops;
@@ -26,36 +36,42 @@ namespace Code.Client.Logic
         private AudioClip[] _thrustStops;
         [SerializeField]
         private AudioSource _audioSource;
-        
-        
-        private ParticleSystem.MinMaxCurve _defaultSmokeRate = 100;
-        private ParticleSystem.MinMaxCurve _defaultFireRate = 30;
-        
-        private bool _isThrusting;
-        
-        float _loopFadeTime = 0.1f;
+
+        [SerializeField] private Light2D _light;
+
+        private ThrusterState _currentState = ThrusterState.Idle;
+        private Coroutine _soundTransitionCoroutine;
+        private Coroutine _flickerCoroutine;
+
         private float _thrustVolume = 1f;
-        private float _currentThrusterVolume = 0f;
-        
+        private float _maxLightIntensity = 1f;
+        private float _loopFadeTime = 0.1f;
+
         private ObjectPoolManager _objectPoolManager;
-        
         private PooledParticleSystem _smokeParticles;
         private PooledParticleSystem _fireParticles;
-        
+
+        private ParticleSystem.MinMaxCurve _defaultSmokeRate = 100;
+        private ParticleSystem.MinMaxCurve _defaultFireRate = 30;
+
         private void Awake()
         {
             _thrustVolume = _audioSource.volume;
         }
-        
+
         public void Initialize(ObjectPoolManager objectPoolManager)
         {
             _objectPoolManager = objectPoolManager;
         }
-        
+
         private void GetPooledParticles()
         {
-            var smokeParticlesName = "smallThrusterSmoke";
-            var fireParticlesName = "smallThrusterFire";
+            if (_objectPoolManager == null)
+                return;
+
+            string smokeParticlesName = "smallThrusterSmoke";
+            string fireParticlesName = "smallThrusterFire";
+
             switch (_size)
             {
                 case ThrusterSize.Medium:
@@ -67,123 +83,181 @@ namespace Code.Client.Logic
                     fireParticlesName = "largeThrusterFire";
                     break;
             }
-            if (!_smokeParticles)
+
+            if (_smokeParticles == null)
                 _smokeParticles = _objectPoolManager.GetObject<PooledParticleSystem>(smokeParticlesName);
-            if (!_fireParticles)
+
+            if (_fireParticles == null)
                 _fireParticles = _objectPoolManager.GetObject<PooledParticleSystem>(fireParticlesName);
-            
+
             _smokeParticles.SpawnAttached(transform);
             _fireParticles.SpawnAttached(transform);
         }
-        
+
         private void ReturnPooledParticles()
         {
-            if (_smokeParticles)
+            if (_smokeParticles != null)
+            {
                 _smokeParticles.Stop();
-            if (_fireParticles)
-                _fireParticles.Stop();
-            
-            _smokeParticles = null;
-            _fireParticles = null;
-        }
-
-        private IEnumerator FadeOutLoop()
-        {
-            float startVolume = _audioSource.volume;
-            float startTime = Time.time;
-            while (Time.time < startTime + _loopFadeTime)
-            {
-                _audioSource.volume = startVolume * (1 - (Time.time - startTime) / _loopFadeTime);
-                yield return new WaitForEndOfFrame();
+                _smokeParticles = null;
             }
-            _audioSource.Stop();
-        }
-        
-        public IEnumerator FadeInLoop()
-        {
-            float startVolume = _audioSource.volume;
-            float startTime = Time.time;
-            while (Time.time < startTime + _loopFadeTime)
+
+            if (_fireParticles != null)
             {
-                _audioSource.volume = startVolume * ((Time.time - startTime) / _loopFadeTime);
-                yield return new WaitForEndOfFrame();
+                _fireParticles.Stop();
+                _fireParticles = null;
             }
         }
 
         public void SetThrust(float thrustPercent)
         {
-            if (_objectPoolManager == null)
-                return;
-            
-            // stop the particles if thrust is 0
             if (thrustPercent < 0.01f)
             {
-                // return pooled particles
-                ReturnPooledParticles();
+                // Stop thrusting
+                if (_currentState != ThrusterState.Idle)
+                {
+                    ChangeState(ThrusterState.Stopping);
+                }
             }
             else
             {
-                // get pooled particles
-                GetPooledParticles();
-                
-                // Adjust particle emissions based on thrust percentage
+                // Start or continue thrusting
+                if (_currentState == ThrusterState.Idle || _currentState == ThrusterState.Stopping)
+                {
+                    ChangeState(ThrusterState.Starting);
+                }
+                else if (_currentState == ThrusterState.Looping)
+                {
+                    AdjustLoopVolume(thrustPercent);
+                }
+            }
+
+            UpdateLightAndParticles(thrustPercent);
+        }
+
+        private void ChangeState(ThrusterState newState)
+        {
+            if (_currentState == newState)
+                return;
+
+            // Stop any ongoing sound transition
+            if (_soundTransitionCoroutine != null)
+            {
+                StopCoroutine(_soundTransitionCoroutine);
+            }
+
+            _currentState = newState;
+
+            switch (newState)
+            {
+                case ThrusterState.Starting:
+                    _soundTransitionCoroutine = StartCoroutine(PlayStartSound());
+                    break;
+                case ThrusterState.Looping:
+                    _soundTransitionCoroutine = StartCoroutine(FadeInLoop());
+                    break;
+                case ThrusterState.Stopping:
+                    _soundTransitionCoroutine = StartCoroutine(FadeOutLoop());
+                    break;
+            }
+        }
+
+        private IEnumerator PlayStartSound()
+        {
+            _audioSource.Stop();
+            // _audioSource.loop = false;
+            // _audioSource.clip = _thrustStarts.GetRandomElement();
+            // _audioSource.volume = _thrustVolume;
+            // _audioSource.Play();
+
+            yield return new WaitWhile(() => _audioSource.isPlaying);
+
+            if (_currentState == ThrusterState.Starting)
+            {
+                ChangeState(ThrusterState.Looping);
+            }
+        }
+
+        private IEnumerator FadeInLoop()
+        {
+            _audioSource.Stop();
+            _audioSource.loop = true;
+            _audioSource.clip = _thrustLoops.GetRandomElement();
+            _audioSource.volume = 0;
+            _audioSource.Play();
+
+            float elapsedTime = 0f;
+            while (elapsedTime < _loopFadeTime)
+            {
+                _audioSource.volume = Mathf.Lerp(0, _thrustVolume, elapsedTime / _loopFadeTime);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+            _audioSource.volume = _thrustVolume;
+        }
+
+        private IEnumerator FadeOutLoop()
+        {
+            float startVolume = _audioSource.volume;
+            float elapsedTime = 0f;
+            while (elapsedTime < _loopFadeTime)
+            {
+                _audioSource.volume = Mathf.Lerp(startVolume, 0, elapsedTime / _loopFadeTime);
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+
+            _audioSource.Stop();
+            _currentState = ThrusterState.Idle;
+            ReturnPooledParticles(); // Ensure particles are returned after stopping
+        }
+
+        private void AdjustLoopVolume(float thrustPercent)
+        {
+            _audioSource.volume = _thrustVolume * thrustPercent;
+
+            if (_smokeParticles != null && _fireParticles != null)
+            {
                 var smokeEmission = _smokeParticles.ParticleSystem.emission;
                 var fireEmission = _fireParticles.ParticleSystem.emission;
-
                 smokeEmission.rateOverTime = _defaultSmokeRate.constant * thrustPercent;
                 fireEmission.rateOverTime = _defaultFireRate.constant * thrustPercent;
             }
-            
-            // Adjust audio based on thrust percentage
-            if (_isThrusting)
-                _audioSource.volume = Mathf.Lerp(_currentThrusterVolume, _thrustVolume * thrustPercent, 0.1f);
-            
+        }
+
+        private void UpdateLightAndParticles(float thrustPercent)
+        {
+            if (_flickerCoroutine != null)
+            {
+                StopCoroutine(_flickerCoroutine);
+            }
+
             if (thrustPercent > 0.01f)
             {
-                if (!_isThrusting)
-                {
-                    // Transition to thrusting state
-                    _isThrusting = true;
-
-                    // Play thrust start sound
-                    _audioSource.volume = 0;
-                    _currentThrusterVolume = 0;
-                    _audioSource.loop = false;
-                    _audioSource.clip = _thrustStarts.GetRandomElement();
-                    // _audioSource.Play();
-
-                    // Schedule loop to play after the start sound ends
-                    Invoke(nameof(PlayThrustLoop), 0);
-                }
+                GetPooledParticles(); // Ensure particles are active
+                float targetIntensity = _maxLightIntensity * thrustPercent;
+                _flickerCoroutine = StartCoroutine(FlickerLight(targetIntensity));
             }
             else
             {
-                if (_isThrusting)
-                {
-                    // Transition to non-thrusting state
-                    _isThrusting = false;
-
-                    // Stop the loop with a fade out
-                    StartCoroutine(FadeOutLoop());
-                }
+                _flickerCoroutine = StartCoroutine(FlickerLight(0));
             }
-            
-            _currentThrusterVolume = _audioSource.volume;
         }
 
-        private void PlayThrustLoop()
+        private IEnumerator FlickerLight(float targetIntensity)
         {
-            if (_isThrusting) // Check if still thrusting
-            {
-                _audioSource.volume = 0;
-                _audioSource.loop = true;
-                _audioSource.clip = _thrustLoops.GetRandomElement();
-                _audioSource.Play();
-                
-                // fade in the loop volume
-                // StartCoroutine(FadeInLoop());
-            }
-        }
+            float fadeDuration = 0.1f;
+            float elapsedTime = 0f;
+            float initialIntensity = _light.intensity;
 
+            while (elapsedTime < fadeDuration)
+            {
+                elapsedTime += Time.deltaTime;
+                _light.intensity = Mathf.Lerp(initialIntensity, targetIntensity, elapsedTime / fadeDuration);
+                yield return null;
+            }
+
+            _light.intensity = targetIntensity;
+        }
     }
 }

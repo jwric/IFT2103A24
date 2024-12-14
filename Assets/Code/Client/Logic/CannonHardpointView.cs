@@ -1,17 +1,35 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using Code.Shared;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using Random = UnityEngine.Random;
 
 namespace Code.Client.Logic
 {
     public class CannonHardpointView : MonoBehaviour, IHardpointView
     {
+        private static readonly int Intensity = Shader.PropertyToID("_Intensity");
+        
         private Transform _parentTransform;
         
         [SerializeField] private Transform _ejection;
         [SerializeField] private Transform _base;
         [SerializeField] private Transform _barrelBase;
         [SerializeField] private Transform _barrelEnd;
+        [SerializeField] private SpriteRenderer _glowSprite;
+        [SerializeField] private Light2D _glowLight;
 
+        // sounds
+        [SerializeField] private AudioClip[] _fireSounds;
+        [SerializeField] private AudioSource _fireSource;
+        
+        [SerializeField] private AudioClip _ejectionLockSound;
+        [SerializeField] private AudioClip _ejectionUnlockSound;
+        [SerializeField] private AudioClip[] _reloadSounds;
+        [SerializeField] private AudioSource _mechanismSource;
+        
+        
         public Vector2 FirePosition => GetHardpointFirePosition();
 
         private const float ejectionTrayDistance = 1f / 32f * 5f;
@@ -24,12 +42,34 @@ namespace Code.Client.Logic
 
         private Vector2 _cannonOriginalPos;
         private float _currentRecoil;
-        private float maxCannonRecoil = 0.2f;
+        private float maxCannonRecoil = 0.1f;
         private float cannonResetTime = 0.25f;
         private float cannonRecoilTime = 0.070f;
         
         private Coroutine _ejectionCoroutine;
         private Coroutine _shootEffect;
+
+        private ObjectPoolManager _objectPoolManager;
+
+        // glow material
+        private Material _glowMaterial;
+
+        // private Color _glowColor = new Color(1f, 1f, 1f, 1f);
+        // private Color _glowColorDisabled = new Color(0.5f, 0.5f, 0.5f, 1f);
+        private float _glowHDRIntensity = 4f;
+        private float _glowHDRIntensityDisabled = 0f;
+        
+        private void Start()
+        {
+            // get the cannonBase material
+            _glowMaterial = _glowSprite.material;
+            
+            // set the light intensity
+            _glowLight.intensity = 0f;
+            
+            // set the glow material intensity
+            _glowMaterial.SetFloat(Intensity, _glowHDRIntensityDisabled);
+        }
 
         public void SetRecoilPercent(float percent)
         {
@@ -68,6 +108,9 @@ namespace Code.Client.Logic
 
         public IEnumerator ShootEffect()
         {
+            // Play fire sound
+            _fireSource.PlayOneShot(_fireSounds.GetRandomElement());
+            
             float t = 0f;
 
             // Recoil backward
@@ -133,6 +176,41 @@ namespace Code.Client.Logic
 
             // Start a new animation coroutine
             _ejectionCoroutine = StartCoroutine(AnimateEjectionTray(unlock));
+            // spawn ejected shell
+            if (unlock)
+            {
+                // cooldown glow
+                StartCoroutine(CooldownGlow());
+                
+                var shellPos = _base.TransformPoint(Vector3.left * 8/32f);
+                var shellVel = _base.TransformDirection(Vector3.up * 2 + Vector3.left * Random.Range(1f, 0f));
+                var shellRot = _base.rotation.eulerAngles.z;
+                var shellAngVel = Random.Range(-100f, 100f);
+                var shell = _objectPoolManager.GetObject<EjectedShell>("ejectedShell");
+                shell.Spawn(shellPos, shellVel, shellRot, shellAngVel, 10f);
+            }
+        }
+        
+        private IEnumerator CooldownGlow()
+        {
+            float time = 0.5f;
+            float t = 0f;
+
+            _glowMaterial.SetFloat(Intensity, _glowHDRIntensity);
+            _glowLight.intensity = 1f;
+            while (t < time)
+            {
+                t += Time.deltaTime;
+                // set hdr intensity
+                _glowMaterial.SetFloat(Intensity, Mathf.Lerp(_glowHDRIntensity, _glowHDRIntensityDisabled, t / time));
+                _glowLight.intensity = Mathf.Lerp(1f, 0f, t / time);
+                yield return new WaitForEndOfFrame();
+            }
+            _glowMaterial.SetFloat(Intensity, _glowHDRIntensityDisabled);
+            _glowLight.intensity = 0f;
+            
+            // Ensure final color matches the target
+            // _glowSprite.color = _glowColorDisabled;
         }
 
         private IEnumerator AnimateEjectionTray(bool unlock)
@@ -152,6 +230,12 @@ namespace Code.Client.Logic
                 _ejection.localPosition = Vector3.Lerp(start, end, t / time);
                 yield return new WaitForEndOfFrame();
             }
+            
+            // Play lock sound at the end of the animation
+            if (!unlock)
+            {
+                _mechanismSource.PlayOneShot(_ejectionLockSound);
+            }
 
             // Ensure final position matches the target
             _ejection.localPosition = end;
@@ -160,8 +244,9 @@ namespace Code.Client.Logic
             _ejectionCoroutine = null;
         }
         
-        public void Initialize(Transform parent, Vector2Int position)
+        public void Initialize(Transform parent, Vector2Int position, ObjectPoolManager objectPoolManager)
         {
+            _objectPoolManager = objectPoolManager;
             _parentTransform = parent;
             // Set position relative to the parent
             transform.SetParent(parent);
@@ -188,8 +273,12 @@ namespace Code.Client.Logic
         
         private IEnumerator LockEjectionTrayAfterDelay()
         {
+            // Play reload sound
+            yield return new WaitForSeconds(0.25f); // Match the animation time in HardpointView
+            AudioClip rlSfx = _reloadSounds.GetRandomElement();
+            _mechanismSource.PlayOneShot(rlSfx);
             // Wait for the unlock animation to finish
-            yield return new WaitForSeconds(0.5f); // Match the animation time in HardpointView
+            yield return new WaitForSeconds(rlSfx.length); // Match the animation time in HardpointView
             LockEjectionTray();
         }
         
