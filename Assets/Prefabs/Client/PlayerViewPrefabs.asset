@@ -14,6 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PlayerPrefab: {fileID: 4804507857254071616, guid: da08e55069c0fb64bb66837943261bf8,
     type: 3}
+  LargeThrusterSmokePrefab: {fileID: -4729589092165751414, guid: 83df60e775d57fe4f846b8b98b372320,
+    type: 3}
+  ThrusterSmokePrefab: {fileID: -4729589092165751414, guid: c81cdeb76d1be694db7a79de331610ff,
+    type: 3}
+  LargeThrusterFirePrefab: {fileID: -4729589092165751414, guid: 08dfdff8674a3f94e9d77526f372de05,
+    type: 3}
+  ThrusterFirePrefab: {fileID: -4729589092165751414, guid: 9c31e39042a81fd409fa4596d12c6ae5,
+    type: 3}
   HardpointEntries:
   - Type: 1
     Prefab: {fileID: 1222965046842070581, guid: f1d17d3db4cb45446a3ae80d49c0555f,

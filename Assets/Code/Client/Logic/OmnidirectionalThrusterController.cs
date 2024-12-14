@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
+using Code.Shared;
 using UnityEngine;
 
 namespace Code.Client.Logic
 {
     public class OmnidirectionalThrusterController : MonoBehaviour
     {
+        private ObjectPoolManager _objectPoolManager;
+        
         [SerializeField] private ThrusterView _mainThruster;
         [SerializeField] private ThrusterView _backLeftThruster;
         [SerializeField] private ThrusterView _backRightThruster;
@@ -33,8 +36,25 @@ namespace Code.Client.Logic
             };
         }
 
+        public void Initialize(ObjectPoolManager objectPoolManager)
+        {
+            _objectPoolManager = objectPoolManager;
+            _mainThruster.Initialize(_objectPoolManager);
+            _backLeftThruster.Initialize(_objectPoolManager);
+            _backRightThruster.Initialize(_objectPoolManager);
+            _frontLeftThruster.Initialize(_objectPoolManager);
+            _frontRightThruster.Initialize(_objectPoolManager);
+            _leftLowerThruster.Initialize(_objectPoolManager);
+            _rightLowerThruster.Initialize(_objectPoolManager);
+            _leftUpperThruster.Initialize(_objectPoolManager);
+            _rightUpperThruster.Initialize(_objectPoolManager);
+        }
+        
         public void ApplyThrust(Vector2 force, float torque, float currentRotation)
         {
+            if (_objectPoolManager == null)
+                return;
+            
             // Reset thrust requests
             var keys = new List<ThrusterView>(_thrustRequests.Keys);
             foreach (var key in keys)

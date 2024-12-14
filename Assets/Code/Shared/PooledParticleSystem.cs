@@ -7,6 +7,8 @@ namespace Code.Shared
     public class PooledParticleSystem : SpawnableObject
     {
         private ParticleSystem _particleSystem;
+        
+        public ParticleSystem ParticleSystem => _particleSystem;
 
         private void Awake()
         {
@@ -21,6 +23,19 @@ namespace Code.Shared
             transform.position = position;
             transform.rotation = Quaternion.Euler(0, 0, rotation);
             gameObject.SetActive(true);
+        }
+        
+        public void SpawnAttached(Transform parent, Vector2 localPosition = default, float rotation = 0)
+        {
+            transform.SetParent(parent);
+            transform.localPosition = localPosition;
+            transform.localRotation = Quaternion.Euler(0, 0, rotation);
+            gameObject.SetActive(true);
+        }
+        
+        public void Stop()
+        {
+            _particleSystem.Stop();
         }
         
         private void OnParticleSystemStopped()

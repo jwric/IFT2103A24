@@ -16,6 +16,11 @@ namespace Code.Shared
         protected void ReturnToPool()
         {
             _onDeathCallback(this);
+            // reset transform
+            transform.position = Vector3.zero;
+            transform.rotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+            transform.SetParent(null);
             gameObject.SetActive(false);
         }
     }

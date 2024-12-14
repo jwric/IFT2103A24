@@ -10,7 +10,20 @@ namespace Code.Client
     public class PlayerViewPrefabs : ScriptableObject
     {
         public PlayerView PlayerPrefab;
+        
+        public PooledParticleSystem LargeThrusterSmokePrefab;
+        public PooledParticleSystem ThrusterSmokePrefab;
+        public PooledParticleSystem LargeThrusterFirePrefab;
+        public PooledParticleSystem ThrusterFirePrefab;
 
+        public void SetupObjectPoolManager(ref ObjectPoolManager objectPoolManager)
+        {
+            objectPoolManager.AddPool<PooledParticleSystem>("smallThrusterSmoke", ThrusterSmokePrefab, 100);
+            objectPoolManager.AddPool<PooledParticleSystem>("smallThrusterFire", ThrusterFirePrefab, 100);
+            objectPoolManager.AddPool<PooledParticleSystem>("largeThrusterSmoke", LargeThrusterSmokePrefab, 100);
+            objectPoolManager.AddPool<PooledParticleSystem>("largeThrusterFire", LargeThrusterFirePrefab, 100);
+        }
+        
         [Serializable]
         public struct HardpointPrefabEntry
         {

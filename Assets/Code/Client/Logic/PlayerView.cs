@@ -20,6 +20,8 @@ namespace Code.Client.Logic
 
         private readonly Dictionary<byte, IHardpointView> _hardpoints = new();
         
+        private ObjectPoolManager _objectPoolManager;
+        
         [SerializeField]
         private OmnidirectionalThrusterController _thrusterController;
         
@@ -27,11 +29,12 @@ namespace Code.Client.Logic
         // private HardpointView _hardpointView;
         
         
-        public static PlayerView Create(PlayerView prefab, BasePlayer player)
+        public static PlayerView Create(PlayerView prefab, BasePlayer player, ObjectPoolManager objectPoolManager)
         {
             Quaternion rot = Quaternion.Euler(0f, player.Rotation, 0f);
             var obj = Instantiate(prefab, player.Position, rot);
             obj._name.text = player.Name;
+            obj._objectPoolManager = objectPoolManager;
             obj.SetHardpoints(player.Hardpoints);
             
             // instantiate the rigidbodyView
@@ -79,8 +82,15 @@ namespace Code.Client.Logic
             
             // _rb.simulated = false;
             // _collider.enabled = false;
+            
+            // initialise dependent components
         }
-        
+
+        private void Start()
+        {
+            _thrusterController.Initialize(_objectPoolManager);
+        }
+
         public void OnHit(HitInfo hitInfo)
         {
             // set sprite red for a moment
@@ -93,10 +103,6 @@ namespace Code.Client.Logic
             spriteRenderer.color = Color.red;
             yield return new WaitForSeconds(0.1f);
             spriteRenderer.color = Color.cyan;
-        }
-        
-        private void Update()
-        {
         }
 
         public void Spawn(Vector2 position, float rotation)

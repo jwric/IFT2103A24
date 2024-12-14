@@ -5,13 +5,18 @@ using UnityEngine;
 
 namespace Code.Client.Logic
 {
+    public enum ThrusterSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+    
     public class ThrusterView : MonoBehaviour
     {
         [SerializeField]
-        private ParticleSystem _smokeEffect;
-        [SerializeField]
-        private ParticleSystem _fireEffect;
-
+        private ThrusterSize _size;
+        
         // sounds
         [SerializeField]
         private AudioClip[] _thrustLoops;
@@ -23,8 +28,8 @@ namespace Code.Client.Logic
         private AudioSource _audioSource;
         
         
-        private ParticleSystem.MinMaxCurve _defaultSmokeRate;
-        private ParticleSystem.MinMaxCurve _defaultFireRate;
+        private ParticleSystem.MinMaxCurve _defaultSmokeRate = 100;
+        private ParticleSystem.MinMaxCurve _defaultFireRate = 30;
         
         private bool _isThrusting;
         
@@ -32,14 +37,57 @@ namespace Code.Client.Logic
         private float _thrustVolume = 1f;
         private float _currentThrusterVolume = 0f;
         
+        private ObjectPoolManager _objectPoolManager;
+        
+        private PooledParticleSystem _smokeParticles;
+        private PooledParticleSystem _fireParticles;
+        
         private void Awake()
         {
-            _defaultSmokeRate = _smokeEffect.emission.rateOverTime;
-            _defaultFireRate = _fireEffect.emission.rateOverTime;
             _thrustVolume = _audioSource.volume;
         }
         
-        public IEnumerator FadeOutLoop()
+        public void Initialize(ObjectPoolManager objectPoolManager)
+        {
+            _objectPoolManager = objectPoolManager;
+        }
+        
+        private void GetPooledParticles()
+        {
+            var smokeParticlesName = "smallThrusterSmoke";
+            var fireParticlesName = "smallThrusterFire";
+            switch (_size)
+            {
+                case ThrusterSize.Medium:
+                    smokeParticlesName = "mediumThrusterSmoke";
+                    fireParticlesName = "mediumThrusterFire";
+                    break;
+                case ThrusterSize.Large:
+                    smokeParticlesName = "largeThrusterSmoke";
+                    fireParticlesName = "largeThrusterFire";
+                    break;
+            }
+            if (!_smokeParticles)
+                _smokeParticles = _objectPoolManager.GetObject<PooledParticleSystem>(smokeParticlesName);
+            if (!_fireParticles)
+                _fireParticles = _objectPoolManager.GetObject<PooledParticleSystem>(fireParticlesName);
+            
+            _smokeParticles.SpawnAttached(transform);
+            _fireParticles.SpawnAttached(transform);
+        }
+        
+        private void ReturnPooledParticles()
+        {
+            if (_smokeParticles)
+                _smokeParticles.Stop();
+            if (_fireParticles)
+                _fireParticles.Stop();
+            
+            _smokeParticles = null;
+            _fireParticles = null;
+        }
+
+        private IEnumerator FadeOutLoop()
         {
             float startVolume = _audioSource.volume;
             float startTime = Time.time;
@@ -64,12 +112,27 @@ namespace Code.Client.Logic
 
         public void SetThrust(float thrustPercent)
         {
-            // Adjust particle emissions based on thrust percentage
-            var smokeEmission = _smokeEffect.emission;
-            var fireEmission = _fireEffect.emission;
+            if (_objectPoolManager == null)
+                return;
+            
+            // stop the particles if thrust is 0
+            if (thrustPercent < 0.01f)
+            {
+                // return pooled particles
+                ReturnPooledParticles();
+            }
+            else
+            {
+                // get pooled particles
+                GetPooledParticles();
+                
+                // Adjust particle emissions based on thrust percentage
+                var smokeEmission = _smokeParticles.ParticleSystem.emission;
+                var fireEmission = _fireParticles.ParticleSystem.emission;
 
-            smokeEmission.rateOverTime = _defaultSmokeRate.constant * thrustPercent;
-            fireEmission.rateOverTime = _defaultFireRate.constant * thrustPercent;
+                smokeEmission.rateOverTime = _defaultSmokeRate.constant * thrustPercent;
+                fireEmission.rateOverTime = _defaultFireRate.constant * thrustPercent;
+            }
             
             // Adjust audio based on thrust percentage
             if (_isThrusting)

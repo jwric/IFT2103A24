@@ -51,6 +51,7 @@ namespace Code.Client.Logic
             // create object pools
             _objectPoolManager.AddPool("shoot", shootEffectPrefab, 10);
             _objectPoolManager.AddPool("hit", hitParticles, 50);
+            GameManager.Instance.PlayerViewPrefabs.SetupObjectPoolManager(ref _objectPoolManager);
             
             _camera = camera;
             _playerViewPrefab = playerViewPrefab;
@@ -115,7 +116,7 @@ namespace Code.Client.Logic
         {
             Debug.Log($"[C] Player joined: {packet.InitialInfo.UserName}");
             var remotePlayer = new RemotePlayer(_playerManager, packet.InitialInfo.UserName, packet);
-            var view = PlayerView.Create(_playerViewPrefab, remotePlayer);
+            var view = PlayerView.Create(_playerViewPrefab, remotePlayer, _objectPoolManager);
             _playerManager.AddPlayer(remotePlayer, view);
         }
 
@@ -243,7 +244,7 @@ namespace Code.Client.Logic
                 RewindScene = _rewindScene,
                 RewindPhysicsScene = _rewindScene.GetPhysicsScene2D()
             };
-            var view = PlayerView.Create(_playerViewPrefab, clientPlayer);
+            var view = PlayerView.Create(_playerViewPrefab, clientPlayer, _objectPoolManager);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
             LogicTimer.Start();
