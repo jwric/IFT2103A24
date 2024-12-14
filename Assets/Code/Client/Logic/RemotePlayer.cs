@@ -125,7 +125,7 @@ namespace Code.Client.Logic
             var dataA = _buffer[0];
             var dataB = _buffer[1];
 
-            float stateDeltaTime = dataB.Time - dataA.Time;
+            float stateDeltaTime = NetworkGeneral.SeqDiff(dataB.Tick, dataA.Tick) * LogicTimerClient.FixedDelta;
             if (stateDeltaTime <= 0) return;
 
             float lerpT = _interpolationTimer / stateDeltaTime;
@@ -169,6 +169,14 @@ namespace Code.Client.Logic
 
         public void OnPlayerState(PlayerState state)
         {
+            if (_buffer.Count == 0)
+            {
+                _buffer.Add(state);
+                return;
+            }
+            
+            int diff = NetworkGeneral.SeqDiff(state.Tick, _buffer.Last.Tick);
+            
             if (!GameManager.Instance.Settings.EntityInterpolation)
             {
                 _position = state.Position;
@@ -184,16 +192,17 @@ namespace Code.Client.Logic
             }
             
             _health = state.Health;
-            
-            float timeDiff = state.Time - (_buffer.Count > 0 ? _buffer.Last.Time : 0f);
-            if (timeDiff < 0)
+
+            float timeDiff = diff * LogicTimerClient.FixedDelta;
+            if (timeDiff <= 0)
             {
                 return;
             }
-            
+
+            Debug.Log($"[C] Remote: BufferCount: {_buffer.Count}");
             _bufferTime += timeDiff;
 
-            if (_bufferTime > TargetBufferTime * 1.5f)
+            if (_bufferTime > TargetBufferTime * 2f)
             {
                 int i = 0;
                 while (_buffer.Count > 2 && _bufferTime > TargetBufferTime)
@@ -205,7 +214,12 @@ namespace Code.Client.Logic
                 if (i > 0)
                     Debug.LogWarning($"[C] Remote: Lag detected, cleared {i} buffer entries"); 
             }
-            
+
+            if (_buffer.IsFull)
+            {
+                Debug.LogWarning($"[C] Remote: Buffer full, cleared 1 buffer entry");
+                _buffer.RemoveFromStart(1);
+            }
             _buffer.Add(state);
         }
 

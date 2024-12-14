@@ -7,9 +7,9 @@ namespace Code.Shared
         public const int ProtocolId = 1;
         public static readonly int PacketTypesCount = Enum.GetValues(typeof(PacketType)).Length;
 
-        public const int MaxGameSequence = 1024;
+        public const int MaxGameSequence = 512;
         public const int HalfMaxGameSequence = MaxGameSequence / 2;
-
+        
         public static int SeqDiff(int a, int b)
         {
             return Diff(a, b, HalfMaxGameSequence);
@@ -18,5 +18,7 @@ namespace Code.Shared
         {
             return (a - b + halfMax*3) % (halfMax*2) - halfMax;
         }
+        
+        
     }
 }

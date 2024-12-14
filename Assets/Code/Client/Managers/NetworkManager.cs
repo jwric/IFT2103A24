@@ -43,7 +43,7 @@ namespace Code.Client.Managers
             {
                 AutoRecycle = true,
                 // SimulateLatency = true,
-                // SimulationMaxLatency = 25 + 10,
+                // SimulationMaxLatency = 100 + 10,
                 // SimulationMinLatency = 25,
                 // SimulatePacketLoss = true,
                 // SimulationPacketLossChance = 2

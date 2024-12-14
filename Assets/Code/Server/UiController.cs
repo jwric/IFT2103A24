@@ -44,29 +44,29 @@ namespace Code.Client
         {
             if (_isServerMode)
             {
-                Application.targetFrameRate = 60;
+                Application.targetFrameRate = 120;
                 
-                var token = Environment.GetEnvironmentVariable("SYSTEM_SERVER_TOKEN");
-
-                Console.WriteLine($"Starting in server mode on port {_serverPort}");
-                if (string.IsNullOrEmpty(token))
-                {
-                    Console.WriteLine("Server token not found");
-                }
-                else
-                {
-                    Console.WriteLine($"Server token: {token}");
-                }
-                
-                // Send server init request
-                var request = new SystemServerInitRequest
-                {
-                    IpAddress = _bindAddress.ToString(),
-                    Port = _serverPort,
-                    ServerName = Application.productName,
-                    GameVersion = Application.version
-                };
-                StartCoroutine(PostRequest("http://localhost:5000/srv/systemserver/init", request, token));
+                // var token = Environment.GetEnvironmentVariable("SYSTEM_SERVER_TOKEN");
+                //
+                // Console.WriteLine($"Starting in server mode on port {_serverPort}");
+                // if (string.IsNullOrEmpty(token))
+                // {
+                //     Console.WriteLine("Server token not found");
+                // }
+                // else
+                // {
+                //     Console.WriteLine($"Server token: {token}");
+                // }
+                //
+                // // Send server init request
+                // var request = new SystemServerInitRequest
+                // {
+                //     IpAddress = _bindAddress.ToString(),
+                //     Port = _serverPort,
+                //     ServerName = Application.productName,
+                //     GameVersion = Application.version
+                // };
+                // StartCoroutine(PostRequest("http://localhost:5000/srv/systemserver/init", request, token));
 
                 OnHostClick();
             }

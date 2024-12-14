@@ -54,7 +54,7 @@ namespace Code.Server
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            _logicTimer = new LogicTimerServer(() => {});
+            _logicTimer = new LogicTimerServer(OnLogicUpdate);
             _packetProcessor = new NetPacketProcessor();
             _playerManager = new ServerPlayerManager(this);
             
@@ -70,7 +70,7 @@ namespace Code.Server
             {
                 AutoRecycle = true,
                 // SimulateLatency = true,
-                // SimulationMaxLatency = 25+10,
+                // SimulationMaxLatency = 100+10,
                 // SimulationMinLatency = 25,
                 // SimulatePacketLoss = true,
                 // SimulationPacketLossChance = 2
@@ -143,8 +143,7 @@ namespace Code.Server
                     }
                 }
             }
-            
-            OnLogicUpdate();
+            // OnLogicUpdate();
         }
 
         private void OnLogicUpdate()
@@ -153,6 +152,7 @@ namespace Code.Server
             if (!_netManager.IsRunning)
                 return;
             
+            _playerManager.PreUpdate();
             Physics2D.Simulate(Time.fixedDeltaTime);
             // Debug.Log("Server tick: " + _serverTick);
             _serverTick = (ushort)((_serverTick + 1) % NetworkGeneral.MaxGameSequence);
@@ -160,7 +160,7 @@ namespace Code.Server
             // await SimulateLag();
             
             _playerManager.LogicUpdate();
-            if (_serverTick % 3 == 0)
+            if (_serverTick % 2 == 0)
             {
                 _serverState.Tick = _serverTick;
                 _serverState.PlayerStates = _playerManager.PlayerStates;
@@ -204,7 +204,10 @@ namespace Code.Server
                     debugText += p.GetDebugInfo();
                 }
             }
+            // not on dedicated server
+            #if UNITY_EDITOR
             _debugText.text = debugText;
+            #endif
         }
         
         private NetDataWriter WriteSerializable<T>(PacketType type, T packet) where T : struct, INetSerializable
@@ -298,11 +301,11 @@ namespace Code.Server
             if (!player.IsAlive)
                 return;
             
-            if (NetworkGeneral.SeqDiff(_serverTick, _cachedCommand.ServerTick) < 0)
-            {
-                Debug.LogWarning($"Player {player.Id} sent a command from the future: {_cachedCommand.ServerTick} vs actual {_serverTick}");
-                return;
-            }
+            // if (NetworkGeneral.SeqDiff(_serverTick, _cachedCommand.ServerTick) < 0)
+            // {
+            //     Debug.LogWarning($"Player {player.Id} sent a command from the future: {_cachedCommand.ServerTick} vs actual {_serverTick}");
+            //     return;
+            // }
             
             player.ApplyInput(_cachedCommand, _cachedCommand.Delta);
         }

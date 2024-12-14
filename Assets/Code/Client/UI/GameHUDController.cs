@@ -64,7 +64,7 @@ namespace Code.Client.UI
             health = Mathf.Max(0, health);
             healthText.text = $"Health: {health}";
         }
-
+        
         public void OnRespawnButtonClicked()
         {
             OnRespawn?.Invoke();

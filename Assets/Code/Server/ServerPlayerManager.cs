@@ -118,6 +118,7 @@ namespace Code.Server
                 ActionCode = action.ActionCode,
                 ServerTick = _serverLogic.Tick,
             };
+            Debug.Log($"[S] Player {player.Id} action {action.ActionCode} on hardpoint {action.SlotId}");
             _serverLogic.SendHardpointAction(ref hap);
         }
 
@@ -177,6 +178,18 @@ namespace Code.Server
             }
         }
 
+        public void PreUpdate()
+        {
+            for (int i = 0; i < _playersCount; i++)
+            {
+                var p = _players[i];
+                if (p.Player is ServerPlayer serverPlayer)
+                {
+                    serverPlayer.PreUpdate();
+                }
+            }
+        }
+        
         public bool RemovePlayer(byte playerId)
         {
             for (int i = 0; i < _playersCount; i++)

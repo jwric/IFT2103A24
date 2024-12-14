@@ -19,7 +19,7 @@ namespace Code.Client.GameStates
             // load game data
             var tasks = new List<LoadingTask>
             {
-                new("Loading game data...", LoadGameData)
+                // new("Loading game data...", LoadGameData)
             };
             GameManager.LoadingManager.StartLoading(tasks, OnLoadingComplete);
         }

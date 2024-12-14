@@ -39,7 +39,7 @@ namespace Code.Client.Logic
 
         public ClientLogic()
         {
-            LogicTimer = new LogicTimerClient(() => { });
+            LogicTimer = new LogicTimerClient(OnLogicUpdate);
             _cachedServerState = new ServerState();
             _cachedShootPacket = new ShootPacket();
             _playerManager = new ClientPlayerManager(this);
@@ -95,6 +95,9 @@ namespace Code.Client.Logic
         private void OnLogicUpdate()
         {
             _playerManager.LogicUpdate();
+            Physics2D.Simulate(Time.fixedDeltaTime);
+            _rewindScene.GetPhysicsScene2D().Simulate(Time.fixedDeltaTime);
+            _camera.ManualUpdate(Time.fixedDeltaTime);
         }
         
         public void Update()
@@ -105,14 +108,7 @@ namespace Code.Client.Logic
         
         public void FixedUpdate()
         {
-            // simulating before logic update has bugs
-            // Physics2D.Simulate(Time.fixedDeltaTime);
-            OnLogicUpdate();
-            Physics2D.Simulate(Time.fixedDeltaTime);
-            _rewindScene.GetPhysicsScene2D().Simulate(Time.fixedDeltaTime);
-            if (_playerManager.OurPlayer != null)
-                _playerManager.OurPlayer.StateSnapshot();
-            _camera.ManualUpdate(Time.fixedDeltaTime);
+            // OnLogicUpdate();
         }
         
         private void OnPlayerJoined(PlayerJoinedPacket packet)
@@ -250,6 +246,7 @@ namespace Code.Client.Logic
             var view = PlayerView.Create(_playerViewPrefab, clientPlayer);
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
+            LogicTimer.Start();
         }
         
         public void SendPacketSerializable<T>(PacketType type, T packet, DeliveryMethod deliveryMethod) where T : INetSerializable
@@ -271,6 +268,7 @@ namespace Code.Client.Logic
         
         public void Destroy()
         {
+            LogicTimer.Stop();
             _objectPoolManager.Dispose();
             
             _playerManager.Clear();

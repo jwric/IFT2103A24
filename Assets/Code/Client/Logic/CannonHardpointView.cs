@@ -137,7 +137,7 @@ namespace Code.Client.Logic
 
         private IEnumerator AnimateEjectionTray(bool unlock)
         {
-            float time = 0.5f;
+            float time = 0.1f;
             float t = 0f;
 
             // Determine start and end positions
@@ -170,14 +170,14 @@ namespace Code.Client.Logic
             _cannonOriginalPos = transform.localPosition;
         }
 
-        public void AimAt(Vector2 target)
+        public void AimAt(Vector2 target, float dt)
         {
             const float maxAngle = 30f;
             Vector2 direction = (target - GetHardpointBasePosition()).normalized;
             float targetAngle = Vector2.SignedAngle(_parentTransform.right, direction);
             targetAngle = Mathf.Clamp(targetAngle, -maxAngle, maxAngle);
             float currentAngle = transform.localRotation.eulerAngles.z;
-            float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, turretRotationSpeed * Time.deltaTime);
+            float newAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, turretRotationSpeed * dt);
             transform.localRotation = Quaternion.Euler(0f, 0f, newAngle);
         }
         
@@ -221,6 +221,10 @@ namespace Code.Client.Logic
                     StopCoroutine(_shootEffect);
                 }
                 _shootEffect = StartCoroutine(ShootEffect());
+                
+                // eject shell
+                UnlockEjectionTray();
+                StartCoroutine(LockEjectionTrayAfterDelay());
             }
         }
 

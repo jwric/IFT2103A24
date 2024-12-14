@@ -17,6 +17,7 @@ namespace Code.Client.Logic
         private readonly LiteRingBuffer<PlayerInputPacket> _predictionPlayerStates;
         private readonly LiteRingBuffer<PlayerState> _clientPlayerStates;
         private ServerState _lastServerState;
+        private PlayerState _lastState;
         private const int MaxStoredCommands = 100;
         private bool _firstStateReceived;
         private int _updateCount;
@@ -48,6 +49,9 @@ namespace Code.Client.Logic
         public int StatesReceivedThisClientTick = 0;
         public int ClientTicksWithoutServerState = 0;
         
+        private Queue<(ServerState, PlayerState)> _serverStateBuffer = new();
+        private const int MaxServerStateBufferSize = 5;
+
         public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, PlayerInitialInfo initialInfo) : base(manager, initialInfo.UserName, initialInfo.Id)
         {
             // Add hardpoints
@@ -121,25 +125,123 @@ namespace Code.Client.Logic
 
         private void SyncWithServerState(Rigidbody2D rb, PlayerState ourState)
         {
-            // Sync Rigidbody with the server state
-            rb.MovePosition(ourState.Position);
+            rb.position = ourState.Position;
+            rb.rotation = ourState.Rotation * Mathf.Rad2Deg;
             rb.velocity = ourState.Velocity;
-            rb.MoveRotation(ourState.Rotation * Mathf.Rad2Deg);
             rb.angularVelocity = ourState.AngularVelocity;
         }
         
-        private void RewindAndReapplyPredictions(PlayerState ourState, bool onlyRotation = false)
+        private Vector2 _previousPositionError = Vector2.zero;
+        private float _previousRotationError = 0f;
+        private const float ErrorMagnitudeThreshold = 0.5f;
+        private const float ErrorDeltaThreshold = 0.1f; // Change in error between frames
+
+        private bool IsFalseReconciliation(Vector2 currentPositionError, float currentRotationError)
+        {
+            float positionDelta = (currentPositionError - _previousPositionError).sqrMagnitude;
+            float rotationDelta = Mathf.Abs(currentRotationError - _previousRotationError);
+
+            bool isErratic = positionDelta > ErrorDeltaThreshold || rotationDelta > ErrorDeltaThreshold;
+            bool isLargeDeviation = currentPositionError.sqrMagnitude > ErrorMagnitudeThreshold 
+                                    || Mathf.Abs(currentRotationError) > ErrorMagnitudeThreshold;
+
+            // Store previous errors for future comparisons
+            _previousPositionError = currentPositionError;
+            _previousRotationError = currentRotationError;
+
+            // A false reconciliation is detected if the error change is erratic but not persistently large
+            return isErratic && !isLargeDeviation;
+        }
+        
+        private int _jitterFrameCount = 0;
+        private int _maxJitterFrames = 5; // Tunable parameter
+
+        private readonly Queue<Vector2> _positionErrorHistory = new Queue<Vector2>();
+        private readonly Queue<float> _rotationErrorHistory = new Queue<float>();
+        private const int ErrorHistorySize = 10; // Tunable parameter
+
+        
+        private Vector2 CalculateMean(Queue<Vector2> errors)
+        {
+            if (errors.Count == 0) return Vector2.zero;
+            Vector2 sum = Vector2.zero;
+            foreach (var error in errors) sum += error;
+            return sum / errors.Count;
+        }
+
+        private float CalculateMean(Queue<float> errors)
+        {
+            if (errors.Count == 0) return 0f;
+            float sum = 0f;
+            foreach (var error in errors) sum += error;
+            return sum / errors.Count;
+        }
+
+        private float CalculateVariance(Queue<Vector2> errors, Vector2 mean)
+        {
+            if (errors.Count == 0) return 0f;
+            float variance = 0f;
+            foreach (var error in errors) variance += (error - mean).sqrMagnitude;
+            return variance / errors.Count;
+        }
+
+        private float CalculateVariance(Queue<float> errors, float mean)
+        {
+            if (errors.Count == 0) return 0f;
+            float variance = 0f;
+            foreach (var error in errors) variance += Mathf.Pow(error - mean, 2);
+            return variance / errors.Count;
+        }
+
+        
+        private bool IsJitter(Vector2 currentPositionError, float currentRotationError)
+        {
+            Vector2 meanPositionError = CalculateMean(_positionErrorHistory);
+            float meanRotationError = CalculateMean(_rotationErrorHistory);
+
+            float positionVariance = CalculateVariance(_positionErrorHistory, meanPositionError);
+            float rotationVariance = CalculateVariance(_rotationErrorHistory, meanRotationError);
+
+            float positionStdDev = Mathf.Sqrt(positionVariance);
+            float rotationStdDev = Mathf.Sqrt(rotationVariance);
+
+            float positionZScore = ((currentPositionError - meanPositionError).magnitude) / positionStdDev;
+            float rotationZScore = Mathf.Abs(currentRotationError - meanRotationError) / rotationStdDev;
+
+            bool isPositionOutlier = positionZScore > 2f; // Tunable z-score threshold
+            bool isRotationOutlier = rotationZScore > 2f;
+
+            // Update history
+            if (_positionErrorHistory.Count >= ErrorHistorySize) _positionErrorHistory.Dequeue();
+            _positionErrorHistory.Enqueue(currentPositionError);
+
+            if (_rotationErrorHistory.Count >= ErrorHistorySize) _rotationErrorHistory.Dequeue();
+            _rotationErrorHistory.Enqueue(currentRotationError);
+
+            return isPositionOutlier && isRotationOutlier;
+        }
+
+        
+        private bool IsAdaptiveJitter(Vector2 currentPositionError, float currentRotationError)
+        {
+            if (IsJitter(currentPositionError, currentRotationError))
+            {
+                _jitterFrameCount++;
+                return _jitterFrameCount <= _maxJitterFrames;
+            }
+            _jitterFrameCount = 0; // Reset on no jitter
+            return false;
+        }
+
+
+        private PlayerState RewindAndReapplyPredictions(PlayerState ourState, out Vector2 positionError, out float rotationError)
         {
             Vector2 prevPosition = _view.Rb.position + _positionError;
             float prevRotation = _view.Rb.rotation + _rotationError;
             
             
-            // SyncWithServerState(_view.Rb, ourState);
             SyncWithServerState(_rewindRb, ourState);
 
-            // Fixes jittering, im not sure why
-            // RewindPhysicsScene.Simulate(Time.fixedDeltaTime);
-            
             // place remote objects in the rewind scene for collision prediction
             {
                 var players = _playerManager.GetEnumerator();
@@ -204,35 +306,21 @@ namespace Code.Client.Logic
                 Object.Destroy(rb.gameObject);
             }
             
-            
-            // Update the view with the result of the rewind
-            if (GameManager.Instance.Settings.ServerReconciliation)
+            // Reconciliation check
+            positionError = prevPosition - _rewindRb.position;
+            rotationError = prevRotation - _rewindRb.rotation;
+
+            _positionError = positionError;
+            _rotationError = rotationError;
+
+            return new PlayerState
             {
-                if (onlyRotation)
-                {
-                    _view.Rb.MoveRotation(_rewindRb.rotation);
-                    _view.Rb.angularVelocity = _rewindRb.angularVelocity;
-                }
-                else
-                {
-                    _view.Rb.MovePosition(_rewindRb.position);
-                    _view.Rb.MoveRotation(_rewindRb.rotation);
-                    _view.Rb.velocity = _rewindRb.velocity;
-                    _view.Rb.angularVelocity = _rewindRb.angularVelocity;
-                }
-            }
-            
-            if ((prevPosition - _view.Rb.position).sqrMagnitude >= 4.0f)
-            {
-                _positionError = Vector2.zero;
-                _rotationError = 0f;
-            }
-            else
-            {
-                _positionError = prevPosition - _view.Rb.position;
-                _rotationError = prevRotation - _view.Rb.rotation;
-            }
-            
+                Position = _rewindRb.position,
+                Rotation = _rewindRb.rotation * Mathf.Deg2Rad,
+                Velocity = _rewindRb.velocity,
+                AngularVelocity = _rewindRb.angularVelocity,
+                Tick = _lastServerState.Tick
+            };
         }
         
         public void ReceiveServerState(ServerState serverState, PlayerState ourState)
@@ -241,25 +329,31 @@ namespace Code.Client.Logic
             {
                 if (serverState.LastProcessedCommand == 0)
                     return;
+                _nextCommand.Id = serverState.Tick;
                 _firstStateReceived = true;
             }
             if (serverState.Tick == _lastServerState.Tick || 
                 serverState.LastProcessedCommand == _lastServerState.LastProcessedCommand)
                 return;
-            
+
             StatesReceivedThisClientTick++;
             var tickGap = ClientTicksWithoutServerState;
             ClientTicksWithoutServerState = 0;
-            Debug.Log($"[C] Received server state: tickGap: {tickGap}");
-            // tick gap should be multiple of 3
 
+            // Add the new state to the buffer
+            _serverStateBuffer.Enqueue((serverState, ourState));
+            if (_serverStateBuffer.Count > MaxServerStateBufferSize)
+            {
+                _serverStateBuffer.Dequeue();
+            }
+            
+            
             _health = ourState.Health;
             
             // if (Input.GetKey(KeyCode.P))
             // {
             //     return;
             // }
-            
             
             // check if received old state
             if (NetworkGeneral.SeqDiff(serverState.LastProcessedCommand, _lastServerState.LastProcessedCommand) < 0)
@@ -275,25 +369,41 @@ namespace Code.Client.Logic
             _tickTime = 0f;
             _sentPackets = 0;
             _lastServerState = serverState;
-            
-            // _position = ourState.Position;
-            // _velocity = ourState.Velocity;
-            // _rotation = ourState.Rotation;
-            // _angularVelocity = ourState.AngularVelocity;
+            _lastState = ourState;
 
+            ApplyLastServerState();
+        }
+
+        public void ApplyLastServerState()
+        {
             if (_predictionPlayerStates.Count == 0)
+            {
+                Debug.Log($"[C] No predictions to apply");
                 return;
+            }
 
-            ushort lastProcessedCommand = _lastServerState.LastProcessedCommand;
+            if (!_firstStateReceived)
+            {
+                Debug.Log($"[C] No server state received yet");
+                return;
+            }
+
+            PlayerState ourState = _lastState;
+            ServerState serverState = _lastServerState;
+
+            ushort lastProcessedCommand = serverState.LastProcessedCommand;
+            ushort lastServerTick = serverState.Tick;
             int diff = NetworkGeneral.SeqDiff(lastProcessedCommand, _predictionPlayerStates.First.Id);
+            // find the state that has the same tick as the last processed command
+            // Debug.Log($"[C] Diff: {diff}");
 
-            
             //apply prediction
             if (diff >= 0 && diff < _predictionPlayerStates.Count)
             {
+                // remove all states that are older than the last processed command
                 _predictionPlayerStates.RemoveFromStart(diff + 1);
                 _clientPlayerStates.RemoveFromStart(diff + 1);
-                
+      
                 if (!GameManager.Instance.Settings.ClientSidePrediction)
                 {
                     SyncWithServerState(_view.Rb, ourState);
@@ -302,11 +412,28 @@ namespace Code.Client.Logic
                 
                 Vector2 positionError = ourState.Position - _clientPlayerStates.First.Position;
                 float rotationError = ourState.Rotation - _clientPlayerStates.First.Rotation;
-                if (positionError.sqrMagnitude > 0.0000001f || Mathf.Abs(rotationError) > 0.00001f*Mathf.Deg2Rad)
+                if (positionError.sqrMagnitude > 0.0001f || Mathf.Abs(rotationError) > 0.1f * Mathf.Deg2Rad)
                 {
-                    Debug.Log($"[C] Position error: {positionError.sqrMagnitude}, Rotation error: {rotationError}");
-                    RewindAndReapplyPredictions(ourState, false);
+                    // maybe we could buffer the corrected states and check for jittering to avoid false corrections
+                    PlayerState newState = RewindAndReapplyPredictions(ourState, out positionError, out rotationError);
+                    // if (IsFalseReconciliation(positionError, rotationError))
+                    // {
+                    //     Debug.LogWarning($"[C] False reconciliation detected");
+                    // }
+                    // else
+                    // {
+                    //     if (IsAdaptiveJitter(positionError, rotationError) || (Input.GetKey(KeyCode.R) && diff > 3))
+                    //     {
+                    //         Debug.LogWarning($"[C] Jitter detected");
+                    //     }
+                    //     else
+                    //     {
+                    // Debug.Log($"[C] Applying correction: {positionError} {rotationError}");
+                            SyncWithServerState(_view.Rb, newState);
+                        // }
+                    // }
                 }
+
             }
             else if (diff >= _predictionPlayerStates.Count)
             {
@@ -316,11 +443,6 @@ namespace Code.Client.Logic
                 _predictionPlayerStates.FastClear();
                 _clientPlayerStates.FastClear();
                 _nextCommand.Id = lastProcessedCommand;
-            }
-            else
-            {
-                Debug.Log(
-                    $"[ERR] SP: {_lastServerState.LastProcessedCommand}, OUR: {_predictionPlayerStates.First.Id}, DF:{diff}, STORED: {StoredCommands}");
             }
         }
 
@@ -407,6 +529,9 @@ namespace Code.Client.Logic
             _rotation = _view.Rb.rotation * Mathf.Deg2Rad;
             _angularVelocity = _view.Rb.angularVelocity;
             
+            // state snapshot
+            PlayerState currentState = StateSnapshot();
+
             
             // if (correctionSmoothing)
             // {
@@ -442,7 +567,8 @@ namespace Code.Client.Logic
                 _clientPlayerStates.FastClear();
             }
             _predictionPlayerStates.Add(_nextCommand);
-            
+            _clientPlayerStates.Add(currentState);
+
 
             _tickTime += delta;
             
@@ -460,7 +586,7 @@ namespace Code.Client.Logic
             base.Update(delta);
         }
 
-        public void StateSnapshot()
+        public PlayerState StateSnapshot()
         {
             PlayerState currentState = new PlayerState
             {
@@ -468,10 +594,9 @@ namespace Code.Client.Logic
                 Rotation = _view.Rb.rotation * Mathf.Deg2Rad,
                 Velocity = _view.Rb.velocity,
                 AngularVelocity = _view.Rb.angularVelocity,
-                Tick = _lastServerState.Tick,
-                Time = Time.fixedTime,
+                Tick = _lastServerState.Tick
             };
-            _clientPlayerStates.Add(currentState);
+            return currentState;
         }
 
         public override void FrameUpdate(float delta)
@@ -543,7 +668,7 @@ namespace Code.Client.Logic
             {
                 var slot = Hardpoints[i];
                 _view.GetHardpointView(slot.Id, out var hardpointView);
-                hardpointView?.AimAt(_aimPosition);
+                hardpointView?.AimAt(_aimPosition, delta);
             }
             
             // Apply hardpoint actions and state

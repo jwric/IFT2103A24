@@ -7,7 +7,7 @@ namespace Code.Client.Logic
     {
         void Initialize(Transform parent, Vector2Int position);
         
-        void AimAt(Vector2 target);
+        void AimAt(Vector2 target, float dt);
 
         void CurrentRotation(float rotation);
         

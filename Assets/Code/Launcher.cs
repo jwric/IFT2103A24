@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,10 +22,29 @@ namespace Code
         
         void Start()
         {
-            // Display options in the console (or implement a UI for selection)
-            Debug.Log("Press 'S' to launch the Server");
-            Debug.Log("Press 'C' to launch the Client");
+            // check if is in server mode already
+            string[] args = Environment.GetCommandLineArgs();
+
+            // Check for specific server arguments
+            if (args.Contains("-server"))
+            {
+                StartCoroutine(LaunchServer());
+                hasChosen = true;
+            }
+            else if (args.Contains("-client"))
+            {
+                StartCoroutine(LaunchClient());
+                hasChosen = true;
+            }
+            else
+            {
+                // Display options in the console (or implement a UI for selection)
+                Debug.Log("Press 'S' to launch the Server");
+                Debug.Log("Press 'C' to launch the Client");
+            }
         }
+        
+        
 
         void Update()
         {
