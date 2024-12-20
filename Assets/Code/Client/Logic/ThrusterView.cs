@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using Code.Client.Managers;
 using Code.Shared;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -35,7 +36,7 @@ namespace Code.Client.Logic
         [SerializeField]
         private AudioClip[] _thrustStops;
         [SerializeField]
-        private AudioSource _audioSource;
+        private GameAudioSource _audioSource;
 
         [SerializeField] private Light2D _light;
 
@@ -43,7 +44,7 @@ namespace Code.Client.Logic
         private Coroutine _soundTransitionCoroutine;
         private Coroutine _flickerCoroutine;
 
-        private float _thrustVolume = 1f;
+        private float _baseVolume = 1f;
         private float _maxLightIntensity = 1f;
         private float _loopFadeTime = 0.1f;
 
@@ -56,7 +57,6 @@ namespace Code.Client.Logic
 
         private void Awake()
         {
-            _thrustVolume = _audioSource.volume;
         }
 
         public void Initialize(ObjectPoolManager objectPoolManager)
@@ -170,7 +170,7 @@ namespace Code.Client.Logic
             // _audioSource.volume = _thrustVolume;
             // _audioSource.Play();
 
-            yield return new WaitWhile(() => _audioSource.isPlaying);
+            yield return new WaitWhile(() => _audioSource.IsPlaying);
 
             if (_currentState == ThrusterState.Starting)
             {
@@ -181,28 +181,28 @@ namespace Code.Client.Logic
         private IEnumerator FadeInLoop()
         {
             _audioSource.Stop();
-            _audioSource.loop = true;
-            _audioSource.clip = _thrustLoops.GetRandomElement();
-            _audioSource.volume = 0;
-            _audioSource.Play();
+            _audioSource.SetLoop(true);
+            // _audioSource.SetClip(_thrustLoops.GetRandomElement());
+            _audioSource.SetVolume(0);
+            _audioSource.Play(_thrustLoops.GetRandomElement());
 
             float elapsedTime = 0f;
             while (elapsedTime < _loopFadeTime)
             {
-                _audioSource.volume = Mathf.Lerp(0, _thrustVolume, elapsedTime / _loopFadeTime);
+                _audioSource.SetVolume(Mathf.Lerp(0, _baseVolume, elapsedTime / _loopFadeTime));
                 elapsedTime += Time.deltaTime;
                 yield return null;
             }
-            _audioSource.volume = _thrustVolume;
+            _audioSource.SetVolume(_baseVolume);
         }
 
         private IEnumerator FadeOutLoop()
         {
-            float startVolume = _audioSource.volume;
+            float startVolume = _audioSource.Volume;
             float elapsedTime = 0f;
             while (elapsedTime < _loopFadeTime)
             {
-                _audioSource.volume = Mathf.Lerp(startVolume, 0, elapsedTime / _loopFadeTime);
+                _audioSource.SetVolume(Mathf.Lerp(startVolume, 0, elapsedTime / _loopFadeTime));
                 elapsedTime += Time.deltaTime;
                 yield return null;
             }
@@ -214,9 +214,9 @@ namespace Code.Client.Logic
 
         private void AdjustLoopVolume(float thrustPercent)
         {
-            _audioSource.volume = _thrustVolume * thrustPercent;
+            _audioSource.SetVolume(_baseVolume * thrustPercent);
 
-            if (_smokeParticles != null && _fireParticles != null)
+            if (_smokeParticles && _fireParticles)
             {
                 var smokeEmission = _smokeParticles.ParticleSystem.emission;
                 var fireEmission = _fireParticles.ParticleSystem.emission;

@@ -16,6 +16,7 @@ namespace Code.Client.Managers
         // Managers
         public UIManager UIManager { get; private set; }
         public NetworkManager NetworkManager { get; private set; }
+        public AudioManager AudioManager { get; private set; }
         public LoadingManager LoadingManager { get; private set; }
         
         // States
@@ -36,6 +37,7 @@ namespace Code.Client.Managers
         public Settings Settings;
         
         public PlayerViewPrefabs PlayerViewPrefabs;
+        public AudioManagerResources AudioManagerResources;
         
         // Prefabs
         public Logic.PlayerView PlayerViewPrefab;
@@ -55,11 +57,13 @@ namespace Code.Client.Managers
             Instance = this;
             DontDestroyOnLoad(gameObject);
             
+            Settings = new Settings();
+
             UIManager = new UIManager(this, _mainMenu, _loadingScreen, _pauseMenu, _gameHUD);
             NetworkManager = new NetworkManager(this);
+            AudioManager = new AudioManager(this);
             LoadingManager = new LoadingManager(this);
             
-            Settings = new Settings();
             
             // Initialize states
             _states.Add(typeof(LoadingState), new LoadingState(this));
@@ -102,8 +106,8 @@ namespace Code.Client.Managers
             var dt = Time.deltaTime;
 
             NetworkManager.Poll();
-            
             _currentState?.Update();
+            AudioManager.Update(dt);
         }
 
         private void FixedUpdate()

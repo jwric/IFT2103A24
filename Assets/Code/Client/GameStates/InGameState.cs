@@ -118,6 +118,19 @@ namespace Code.Client.GameStates
                 _clientLogic = new Logic.ClientLogic();
                 _clientLogic.Init(camera, playerViewPrefab, shootPrefab, hitParticles, rewindPrefab, hudController);
                 
+                // play music
+                GameManager.AudioManager.PlayMusic("Cosmos");
+                // play ambience
+                GameManager.AudioManager.PlayAmbience("space_loop5", Vector2.zero, new AudioClipSettings
+                {
+                    Volume = 0.5f,
+                    Pitch = 1,
+                    Loop = true,
+                    Spatialised = false,
+                    MinDistance = 10,
+                    MaxDistance = 100
+                });
+                
                 // sub to death screen events
                 hudController.OnRespawn = () =>
                 {
@@ -162,8 +175,12 @@ namespace Code.Client.GameStates
 
             // cleanup
             GameManager.NetworkManager.Disconnect();
-         
+            
+            GameManager.AudioManager.StopAmbience();
+
         }
+        
+        private float _lastSoundTime;
 
         public override void Update()
         {
@@ -179,6 +196,32 @@ namespace Code.Client.GameStates
             if (IsReady)
             {
                 _clientLogic.Update();
+                
+                // random chance of playing a sound around the player
+                var chanceInterval = 0.0025f;
+                if (UnityEngine.Random.value < chanceInterval && Time.time - _lastSoundTime > 10)
+                {
+                    string[] sounds = {"metal_breaking", "metal_breaking_alt"};
+                    var sound = sounds[UnityEngine.Random.Range(0, sounds.Length)];
+                    var pitch = UnityEngine.Random.Range(0.8f, 1.2f);
+                    var basePos = _clientLogic._camera.transform.position;
+                    var randomRange = 50;
+                    var minRange = 10;
+                    // random range inside sphere with minimum range
+                    var pos = basePos + UnityEngine.Random.insideUnitSphere * randomRange;
+                    pos = Vector2.ClampMagnitude(pos, minRange);
+                    GameManager.AudioManager.PlayAmbience(sound, pos, new AudioClipSettings
+                    {
+                        Volume = 0.5f,
+                        Pitch = pitch,
+                        Loop = false,
+                        Spatialised = true,
+                        SpatialBlend = 1,
+                        MinDistance = 10,
+                        MaxDistance = 100
+                    });
+                    _lastSoundTime = Time.time;
+                }
             }
         }
         

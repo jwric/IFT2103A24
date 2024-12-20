@@ -22,12 +22,12 @@ namespace Code.Client.Logic
 
         // sounds
         [SerializeField] private AudioClip[] _fireSounds;
-        [SerializeField] private AudioSource _fireSource;
+        [SerializeField] private GameAudioSource _fireSource;
         
         [SerializeField] private AudioClip _ejectionLockSound;
         [SerializeField] private AudioClip _ejectionUnlockSound;
         [SerializeField] private AudioClip[] _reloadSounds;
-        [SerializeField] private AudioSource _mechanismSource;
+        [SerializeField] private GameAudioSource _mechanismSource;
         
         
         public Vector2 FirePosition => GetHardpointFirePosition();

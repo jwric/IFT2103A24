@@ -7,8 +7,8 @@ namespace Code.Client.Logic
     public class ShootEffect : SpawnableObject
     {
         [SerializeField] private LineRenderer _trailRenderer;
-        [SerializeField] private AudioSource _source;
-        [SerializeField] private AudioSource _target;
+        [SerializeField] private GameAudioSource _source;
+        [SerializeField] private GameAudioSource _target;
         [SerializeField] private AudioClip[] _shootClips;
         [SerializeField] private AudioClip[] _hitClips;
         [SerializeField] private GameObject _bulletPrefab; // Reference to your bullet prefab

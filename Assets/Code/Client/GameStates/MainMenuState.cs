@@ -12,6 +12,9 @@ namespace Code.Client.GameStates
 
         public override void OnEnter(object context = null)
         {
+            // play music
+            GameManager.AudioManager.PlayMusic("Home");
+            
             var tasks = new List<LoadingTask>
             {
                 new("Cleaning up game session...", CleanupGameSession),

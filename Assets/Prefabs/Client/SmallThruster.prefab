@@ -93,6 +93,7 @@ GameObject:
   - component: {fileID: 1729222218405659781}
   - component: {fileID: 1006066829094298653}
   - component: {fileID: -2199532906995440646}
+  - component: {fileID: -9009199936419409464}
   m_Layer: 0
   m_Name: SmallThruster
   m_TagString: Untagged
@@ -139,7 +140,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 982799bad8edb2c42881b104c7d561ef, type: 3}
   _thrustStops:
   - {fileID: 8300000, guid: b08877ca67e9f0c46b0983acf1911088, type: 3}
-  _audioSource: {fileID: -2199532906995440646}
+  _audioSource: {fileID: -9009199936419409464}
   _light: {fileID: 4582245703555959196}
 --- !u!82 &-2199532906995440646
 AudioSource:
@@ -237,3 +238,16 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &-9009199936419409464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8238021841033229958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0283feaa8e1447d78692e4c205ef6aca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _audioType: 2

@@ -251,6 +251,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6589428951704469504}
   - component: {fileID: 2721550175456079499}
+  - component: {fileID: 5691940135830752672}
   m_Layer: 0
   m_Name: From
   m_TagString: Untagged
@@ -369,6 +370,19 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &5691940135830752672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3604735914733021196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0283feaa8e1447d78692e4c205ef6aca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioGroupType: 2
 --- !u!1 &6888274765561601940
 GameObject:
   m_ObjectHideFlags: 0
@@ -379,6 +393,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6218223324148723486}
   - component: {fileID: 7954143563232318346}
+  - component: {fileID: 7614920281436889540}
   m_Layer: 0
   m_Name: To
   m_TagString: Untagged
@@ -497,6 +512,19 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &7614920281436889540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6888274765561601940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0283feaa8e1447d78692e4c205ef6aca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioGroupType: 2
 --- !u!1 &8525329206789753046
 GameObject:
   m_ObjectHideFlags: 0
@@ -545,8 +573,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _trailRenderer: {fileID: 8921832712757828151}
-  _source: {fileID: 2721550175456079499}
-  _target: {fileID: 7954143563232318346}
+  _source: {fileID: 5691940135830752672}
+  _target: {fileID: 7614920281436889540}
   _shootClips:
   - {fileID: 8300000, guid: 55dee76dad95e3d4485c01b3bffe0cc3, type: 3}
   - {fileID: 8300000, guid: 8fa59a9269be9fb43992ae257a830baf, type: 3}
