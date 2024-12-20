@@ -108,9 +108,11 @@ namespace Code.Server
 
             // Apply the input command
             {
-                _playerView.Move(command.Thrust * _speed);
-                _playerView.Rotate(command.AngularThrust * _angularSpeed);
-
+                var thrust = _ship.CalculateInverseThrustPercents(command.Thrust, _rotation * Mathf.Rad2Deg, command.Thrust);
+                var calculatedThrust = _ship.CalculateDirThrustForce(thrust);
+                var calculatedTorque = _ship.CalculateAngularThrustTorque(command.AngularThrust);
+                _playerView.Move(calculatedThrust);
+                _playerView.Rotate(calculatedTorque);
 
                 _position = _playerView.Position;
                 _velocity = _playerView.Velocity;

@@ -12,6 +12,7 @@ namespace Code.Client.Logic
     {
         [SerializeField] private Rigidbody2D _rbView;
         [SerializeField] private TextMesh _name;
+        public ShipType ShipType;
         
         private Rigidbody2D _rb;
         private Collider2D _collider;
@@ -23,7 +24,7 @@ namespace Code.Client.Logic
         private ObjectPoolManager _objectPoolManager;
         
         [SerializeField]
-        private OmnidirectionalThrusterController _thrusterController;
+        private OmnidirectionalThrusterController2 _thrusterController;
         
         // [SerializeField]
         // private HardpointView _hardpointView;
@@ -114,7 +115,12 @@ namespace Code.Client.Logic
 
         public void ApplyThrust(Vector2 thrust, float torque)
         {
-            _thrusterController.ApplyThrust(thrust, torque, _rb.rotation);
+            _thrusterController.ApplyThrust(thrust, torque);
+        }
+        
+        public void ApplyLocalThrust(Vector2 thrust, float torque)
+        {
+            _thrusterController.ApplyLocalThrust(thrust, torque, _rb.rotation);
         }
         
         public void Die()

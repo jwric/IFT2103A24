@@ -31,7 +31,6 @@ namespace Code.Client.Logic
         private Scene _rewindScene;
         
         
-        private PlayerView _playerViewPrefab;
         public GameObject RewindGO;
 
         private GameHUDController _gameHUD;
@@ -46,7 +45,7 @@ namespace Code.Client.Logic
             _objectPoolManager = new ObjectPoolManager();
         }
         
-        public void Init(CameraFollow camera, PlayerView playerViewPrefab, ShootEffect shootEffectPrefab, PooledParticleSystem hitParticles, GameObject rewindGO, GameHUDController gameHUD)
+        public void Init(CameraFollow camera, ShootEffect shootEffectPrefab, PooledParticleSystem hitParticles, GameObject rewindGO, GameHUDController gameHUD)
         {
             // create object pools
             _objectPoolManager.AddPool("shoot", shootEffectPrefab, 10);
@@ -54,7 +53,6 @@ namespace Code.Client.Logic
             GameManager.Instance.PlayerViewPrefabs.SetupObjectPoolManager(ref _objectPoolManager);
             
             _camera = camera;
-            _playerViewPrefab = playerViewPrefab;
             RewindGO = rewindGO;
             
             _gameHUD = gameHUD;
@@ -90,7 +88,16 @@ namespace Code.Client.Logic
         private void SendJoinRequest()
         {
             Debug.Log("[C] Connected to server");
-            SendPacket(new JoinPacket {UserName = _username}, DeliveryMethod.ReliableOrdered);
+            
+            Array values = Enum.GetValues(typeof(ShipType));
+            Random random = new Random();
+            ShipType randomShip = (ShipType)values.GetValue(random.Next(values.Length));
+            
+            SendPacket(new JoinPacket
+            {
+                UserName = _username, 
+                ShipType = randomShip,
+            }, DeliveryMethod.ReliableOrdered);
         }
         
         private void OnLogicUpdate()
@@ -116,7 +123,11 @@ namespace Code.Client.Logic
         {
             Debug.Log($"[C] Player joined: {packet.InitialInfo.UserName}");
             var remotePlayer = new RemotePlayer(_playerManager, packet.InitialInfo.UserName, packet);
-            var view = PlayerView.Create(_playerViewPrefab, remotePlayer, _objectPoolManager);
+            // create player view
+            var shipType = packet.InitialInfo.ShipType;
+            var prefab = GameManager.Instance.PlayerViewPrefabs.GetPlayerView(shipType);
+            var view = PlayerView.Create(prefab, remotePlayer, _objectPoolManager);
+            view.gameObject.layer = LayerMask.NameToLayer("RemotePlayer");
             _playerManager.AddPlayer(remotePlayer, view);
         }
 
@@ -152,6 +163,11 @@ namespace Code.Client.Logic
         private void OnShoot(ShootPacket packet)
         {
             _cachedShootPacket = packet;
+            
+            
+            var pHit = _playerManager.GetById(_cachedShootPacket.PlayerHit);
+
+            
             var p = _playerManager.GetById(_cachedShootPacket.FromPlayer);
             if (p != null && p != _playerManager.OurPlayer)
             {
@@ -163,15 +179,13 @@ namespace Code.Client.Logic
                 
                 if (p is RemotePlayer rp)
                 {
-                    var firePos = rp.GetViewHardpointFirePosition(_cachedShootPacket.HardpointId);
-                    SpawnShoot(firePos, _cachedShootPacket.Hit);
+                    // playerhit
+                    rp.ShootHardpoint(_cachedShootPacket.HardpointId, _cachedShootPacket.Hit, pHit, 10);
                 }   
             }
             
             if (!_cachedShootPacket.AnyHit)
                 return;
-            
-            var pHit = _playerManager.GetById(_cachedShootPacket.PlayerHit);
             if (pHit == null)
                 return;
             
@@ -216,18 +230,6 @@ namespace Code.Client.Logic
             player.Spawn(packet.Position);
         }
 
-        public void SpawnShoot(Vector2 from, Vector2 to)
-        {
-            var particles = _objectPoolManager.GetObject<PooledParticleSystem>("hit");
-            var effDir = (to - from).normalized;
-            var effPos = from + effDir * 0.5f;
-            var effAngle = Mathf.Atan2(effDir.y, effDir.x) * Mathf.Rad2Deg;
-            particles.Spawn(effPos, effAngle);
-            
-            var eff = _objectPoolManager.GetObject<ShootEffect>("shoot");
-            eff.Spawn(from, to);
-        }
-
         private void OnPlayerLeaved(PlayerLeavedPacket packet)
         {
             var player = _playerManager.RemovePlayer(packet.Id);
@@ -244,7 +246,10 @@ namespace Code.Client.Logic
                 RewindScene = _rewindScene,
                 RewindPhysicsScene = _rewindScene.GetPhysicsScene2D()
             };
-            var view = PlayerView.Create(_playerViewPrefab, clientPlayer, _objectPoolManager);
+            var shipType = packet.OwnPlayerInfo.ShipType;
+            var prefab = GameManager.Instance.PlayerViewPrefabs.GetPlayerView(shipType);
+            var view = PlayerView.Create(prefab, clientPlayer, _objectPoolManager);
+            view.gameObject.layer = LayerMask.NameToLayer("Player");
             _camera.target = view.transform;
             _playerManager.AddClientPlayer(clientPlayer, view);
             LogicTimer.Start();

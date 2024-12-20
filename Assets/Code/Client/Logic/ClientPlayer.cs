@@ -54,13 +54,16 @@ namespace Code.Client.Logic
 
         public ClientPlayer(ClientLogic clientLogic, ClientPlayerManager manager, PlayerInitialInfo initialInfo) : base(manager, initialInfo.UserName, initialInfo.Id)
         {
-            // Add hardpoints
-            for (var index = 0; index < initialInfo.Hardpoints.Length; index++)
-            {
-                var slot = initialInfo.Hardpoints[index];
-                
-                Hardpoints.Add(new HardpointSlot(slot.Id, HardpointFactory.CreateHardpoint(slot.Type), new Vector2Int(slot.X, slot.Y)));
-            }
+            // // Add hardpoints
+            // for (var index = 0; index < initialInfo.Hardpoints.Length; index++)
+            // {
+            //     var slot = initialInfo.Hardpoints[index];
+            //     
+            //     Hardpoints.Add(new HardpointSlot(slot.Id, HardpointFactory.CreateHardpoint(slot.Type), new Vector2Int(slot.X, slot.Y)));
+            // }
+            
+            // create ship
+            _ship = ShipFactory.CreateShip(initialInfo.ShipType);
             
             _playerManager = manager;
             _predictionPlayerStates = new LiteRingBuffer<PlayerInputPacket>(MaxStoredCommands);
@@ -98,10 +101,10 @@ namespace Code.Client.Logic
             hardpointView?.OnHardpointAction(action.ActionCode);
         }
         
-        public Vector2 GetViewHardpointFirePosition(byte id)
+        public void ShootHardpoint(byte hardpointId, Vector2 to, BasePlayer hit, byte damage)
         {
-            _view.GetHardpointView(id, out var hardpointView);
-            return hardpointView?.GetFirePosition() ?? Position;
+            _view.GetHardpointView(hardpointId, out var hardpointView);
+            hardpointView?.SpawnFire(to);
         }
         
         private void ApplyInputToRigidbody(Rigidbody2D rb, PlayerInputPacket command)
@@ -119,8 +122,11 @@ namespace Code.Client.Logic
             //     velocity.x = 1f;
 
             // _view.Move(velocity.normalized * (_speed * delta));
-            rb.AddForce(command.Thrust * _speed, ForceMode2D.Force);
-            rb.AddTorque(command.AngularThrust * _angularSpeed, ForceMode2D.Force);
+            var thrust = _ship.CalculateDirThrustForce(command.Thrust);
+            var angularThrust = _ship.CalculateAngularThrustTorque(command.AngularThrust);
+            var rotatedThrust = Quaternion.Euler(0, 0, rb.rotation) * thrust;
+            rb.AddForce(rotatedThrust, ForceMode2D.Force);
+            rb.AddTorque(angularThrust, ForceMode2D.Force);
         }
 
         private void SyncWithServerState(Rigidbody2D rb, PlayerState ourState)
@@ -609,7 +615,10 @@ namespace Code.Client.Logic
             
             // apply aim to hardpoints, aim doesnt matter in the input  because it is not server authoritative
             
-            Vector2 velocity = new Vector2(horz, vert);
+            // local thrust
+            Vector2 thrust = new Vector2(horz, vert);
+            // from world thrust to local thrust
+            thrust = _ship.CalculateInverseThrustPercents(thrust, _view.Rb.rotation, new Vector2(Mathf.Abs(1), Mathf.Abs(1)));
             
             float torque = 0f;
             
@@ -642,14 +651,14 @@ namespace Code.Client.Logic
 
             _aimPosition = _clientLogic._camera.Camera.ScreenToWorldPoint(Input.mousePosition);
             
-            SetInput(velocity, torque, fire > 0f);
+            SetInput(thrust, torque, fire > 0f);
         }
 
         public override void ApplyInput(PlayerInputPacket command, float delta)
         {
             ApplyInputToRigidbody(_view.Rb, command);
             // apply input to the view
-            _view.ApplyThrust(command.Thrust * _speed, command.AngularThrust * _angularSpeed);
+            _view.ApplyThrust(command.Thrust, command.AngularThrust);
             // _rotation = command.Rotation;
             
             // deprecated

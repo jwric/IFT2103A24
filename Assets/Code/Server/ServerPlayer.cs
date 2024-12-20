@@ -28,15 +28,12 @@ namespace Code.Server
 
         public int TickUpdateCount { get; private set; }
 
-        public ServerPlayer(ServerPlayerManager playerManager, string name, byte id, NetPeer peer) : base(playerManager,
+        public ServerPlayer(ServerPlayerManager playerManager, string name, ShipType shipType, byte id, NetPeer peer) : base(playerManager,
             name, id)
         {
-            // Add hardpoints
-            // for now this will set to a single cannon hardpoint for all players
-            Hardpoints.Add(new HardpointSlot(0, HardpointFactory.CreateHardpoint(HardpointType.Cannon),
-                new Vector2Int(-4, 0)));
-            // Hardpoints.Add(new HardpointSlot(1, HardpointFactory.CreateHardpoint(HardpointType.Cannon), new Vector2Int(-4, -20)));
-
+            // create ship
+            _ship = ShipFactory.CreateShip(shipType);
+            
             _playerManager = playerManager;
             AssociatedPeer = peer;
             peer.Tag = this; // Allows easy identification of this player through the peer
@@ -169,9 +166,11 @@ namespace Code.Server
             LastProcessedCommandTick = command.ServerTick;
 
             // Apply forces
-            _playerView.Move(command.Thrust * _speed);
-            _playerView.Rotate(command.AngularThrust * _angularSpeed);
-
+            var calculatedForce = _ship.CalculateDirThrustForce(command.Thrust);
+            var calculatedTorque = _ship.CalculateAngularThrustTorque(command.AngularThrust);
+            var rotatedForce = Quaternion.Euler(0, 0, _rotation * Mathf.Rad2Deg) * calculatedForce;
+            _playerView.Move(rotatedForce);
+            _playerView.Rotate(calculatedTorque);
 
             inputHasBeenProcessed++;
         }

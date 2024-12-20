@@ -6,6 +6,7 @@ namespace Code.Shared
     {
         None,
         Cannon,
+        PulseLaser,
         Missile,
         Railgun
     }
@@ -114,9 +115,14 @@ namespace Code.Shared
 
     public class CannonFiringStrategy : IFiringStrategy
     {
-        private float _fireCooldown = 1.0f; // 1 second per shot, for example
+        private float _fireCooldown; // 1 second per shot, for example
         private float _timeSinceLastShot = 0f;
 
+        public CannonFiringStrategy(float fireCooldown = 1.0f)
+        {
+            _fireCooldown = fireCooldown;
+        }
+        
         public WeaponAction Update(float delta, bool triggerHeld)
         {
             _timeSinceLastShot += delta;
@@ -266,7 +272,9 @@ namespace Code.Shared
             switch (type)
             {
                 case HardpointType.Cannon:
-                    return new Hardpoint(HardpointType.Cannon, 30f, new CannonFiringStrategy());
+                    return new Hardpoint(HardpointType.Cannon, 30f, new CannonFiringStrategy(1.0f));
+                case HardpointType.PulseLaser:
+                    return new Hardpoint(HardpointType.PulseLaser, 45f, new CannonFiringStrategy(0.25f));
                 case HardpointType.Missile:
                     return new Hardpoint(HardpointType.Missile, 180f, new MissileFiringStrategy());
                 case HardpointType.Railgun:

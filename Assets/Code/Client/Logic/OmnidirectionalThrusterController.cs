@@ -50,7 +50,16 @@ namespace Code.Client.Logic
             _rightUpperThruster.Initialize(_objectPoolManager);
         }
         
-        public void ApplyThrust(Vector2 force, float torque, float currentRotation)
+        public void ApplyLocalThrust(Vector2 force, float torque, float currentRotation)
+        {
+            // Convert global force to local force
+            Quaternion rotation = Quaternion.Euler(0f, 0f, currentRotation);
+            Vector2 localForce = Quaternion.Inverse(rotation) * force;
+            
+            ApplyThrust(localForce, torque);
+        }
+        
+        public void ApplyThrust(Vector2 force, float torque)
         {
             if (_objectPoolManager == null)
                 return;
@@ -61,16 +70,14 @@ namespace Code.Client.Logic
                 _thrustRequests[key] = 0f;
 
             // Convert global force to local force
-            Quaternion rotation = Quaternion.Euler(0f, 0f, currentRotation);
-            Vector2 localForce = Quaternion.Inverse(rotation) * force;
 
             // Max values for normalization
-            float maxForce = 7f;
-            float maxTorque = 0.5f;
+            float maxForce = 1f;
+            float maxTorque = 1f;
 
             // Compute thrust for linear movement
-            float desiredForward = localForce.x; // +X = forward, -X = backward
-            float desiredUp = localForce.y;      // +Y = up, -Y = down
+            float desiredForward = force.x; // +X = forward, -X = backward
+            float desiredUp = force.y;      // +Y = up, -Y = down
 
             if (desiredForward > 0f)
                 _thrustRequests[_mainThruster] += Mathf.Clamp(desiredForward / maxForce, 0f, 1f);

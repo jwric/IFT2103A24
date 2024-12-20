@@ -241,7 +241,7 @@ namespace Code.Server
                 return;
             }
             
-            var player = new ServerPlayer(_playerManager, joinPacket.UserName, (byte)id, peer);
+            var player = new ServerPlayer(_playerManager, joinPacket.UserName, joinPacket.ShipType, (byte)id, peer);
             var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
             _playerManager.AddPlayer(player, playerView);
 
@@ -271,14 +271,14 @@ namespace Code.Server
                 {
                     if (otherPlayer == player)
                         continue;
-                    var info = pj.InitialInfo;
+                    var info = otherPlayer.GetInitialInfo();
                     info.UserName = otherPlayer.Name;
                     pj.InitialInfo = info;
                     pj.InitialPlayerState = otherPlayer.NetworkState;
                 }
                 else if (basePlayer is AIPlayer aiPlayer)
                 {
-                    var info = pj.InitialInfo;
+                    var info = aiPlayer.GetInitialInfo();
                     info.UserName = aiPlayer.Name;
                     pj.InitialInfo = info;
                     pj.InitialPlayerState = aiPlayer.NetworkState;

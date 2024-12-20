@@ -583,6 +583,6 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 2db6c6b7d938d6445a1506241e464a60, type: 3}
   - {fileID: 8300000, guid: 7183751adb74f494d8c1760f20588846, type: 3}
   - {fileID: 8300000, guid: 71216075a33d8b747a2e1cf162174c02, type: 3}
-  _bulletPrefab: {fileID: 259514017587857149, guid: a9dea023d481ea040b8dcce845a50fbb,
+  _bulletPrefab: {fileID: -8773819535023388286, guid: a9dea023d481ea040b8dcce845a50fbb,
     type: 3}
   _bulletSpeed: 50

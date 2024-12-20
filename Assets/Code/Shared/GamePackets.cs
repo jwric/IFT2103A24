@@ -19,6 +19,7 @@ namespace Code.Shared
     public class JoinPacket
     {
         public string UserName { get; set; }
+        public ShipType ShipType { get; set; }
     }
 
     public class JoinAcceptPacket
@@ -62,6 +63,7 @@ namespace Code.Shared
     {
         public byte Id;
         public string UserName;
+        public ShipType ShipType;
         public byte Health;
         
         public byte NumHardpointSlots;
@@ -71,6 +73,7 @@ namespace Code.Shared
         {
             writer.Put(Id);
             writer.Put(UserName);
+            writer.Put((byte)ShipType);
             writer.Put(Health);
             writer.Put(NumHardpointSlots);
             for (int i = 0; i < NumHardpointSlots; i++)
@@ -81,6 +84,7 @@ namespace Code.Shared
         {
             Id = reader.GetByte();
             UserName = reader.GetString();
+            ShipType = (ShipType)reader.GetByte();
             Health = reader.GetByte();
             NumHardpointSlots = reader.GetByte();
             if (Hardpoints == null || Hardpoints.Length < NumHardpointSlots)

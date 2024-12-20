@@ -9,9 +9,13 @@ namespace Code.Client
     [CreateAssetMenu(fileName = "PlayerViewPrefabs", menuName = "PlayerViewPrefabs")]
     public class PlayerViewPrefabs : ScriptableObject
     {
-        public PlayerView PlayerPrefab;
+        
+        public List<PlayerView> PlayerPrefabs;
         
         public EjectedShell EjectedShellPrefab;
+        
+        public Projectile BulletPrefab;
+        public Projectile PulsePrefab;
         
         public PooledParticleSystem LargeThrusterSmokePrefab;
         public PooledParticleSystem ThrusterSmokePrefab;
@@ -26,6 +30,9 @@ namespace Code.Client
             objectPoolManager.AddPool("largeThrusterFire", LargeThrusterFirePrefab, 100);
             
             objectPoolManager.AddPool("ejectedShell", EjectedShellPrefab, 20);
+            
+            objectPoolManager.AddPool("bullet", BulletPrefab, 100);
+            objectPoolManager.AddPool("pulse", PulsePrefab, 100);
         }
         
         [Serializable]
@@ -80,6 +87,20 @@ namespace Code.Client
             // Call Initialize on the IHardpointView implementation
             hardpointView.Initialize(parent, position, objectPoolManager);
             return hardpointView;
+        }
+        
+        public PlayerView GetPlayerView(ShipType shipType)
+        {
+            foreach (var prefab in PlayerPrefabs)
+            {
+                if (prefab.ShipType == shipType)
+                {
+                    return prefab;
+                }
+            }
+
+            Debug.LogError($"No prefab found for ShipType: {shipType}");
+            return null;
         }
     }
 }

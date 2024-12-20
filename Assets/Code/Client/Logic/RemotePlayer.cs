@@ -27,17 +27,20 @@ namespace Code.Client.Logic
             _rotation = pjPacket.InitialPlayerState.Rotation;
             _buffer.Add(pjPacket.InitialPlayerState);
             
-            // Add hardpoints
-            for (var index = 0; index < pjPacket.InitialInfo.Hardpoints.Length; index++)
-            {
-                var slot = pjPacket.InitialInfo.Hardpoints[index];
-                // var state = pjPacket.InitialPlayerState.Hardpoints[index];
-
-                var hardpoint = HardpointFactory.CreateHardpoint(slot.Type);
-                // hardpoint.SetRotation(state.Rotation);
-                Hardpoints.Add(new HardpointSlot(slot.Id, hardpoint, new Vector2Int(slot.X, slot.Y)));
-            }
+            // Create ship
+            _ship = ShipFactory.CreateShip(pjPacket.InitialInfo.ShipType);
             
+            // // Add hardpoints
+            // for (var index = 0; index < pjPacket.InitialInfo.Hardpoints.Length; index++)
+            // {
+            //     var slot = pjPacket.InitialInfo.Hardpoints[index];
+            //     // var state = pjPacket.InitialPlayerState.Hardpoints[index];
+            //
+            //     var hardpoint = HardpointFactory.CreateHardpoint(slot.Type);
+            //     // hardpoint.SetRotation(state.Rotation);
+            //     Hardpoints.Add(new HardpointSlot(slot.Id, hardpoint, new Vector2Int(slot.X, slot.Y)));
+            // }
+            //
             // set kinematic
         }
         
@@ -62,12 +65,12 @@ namespace Code.Client.Logic
             // Do nothing for remote players
         }
         
-        public Vector2 GetViewHardpointFirePosition(byte id)
+        public void ShootHardpoint(byte hardpointId, Vector2 to, BasePlayer hit, byte damage)
         {
-            _view.GetHardpointView(id, out var hardpointView);
-            return hardpointView?.GetFirePosition() ?? Position;
+            _view.GetHardpointView(hardpointId, out var hardpointView);
+            hardpointView?.SpawnFire(to);
         }
-
+        
         public override void OnHardpointAction(HardpointAction action)
         {
             _view.GetHardpointView(action.SlotId, out var hardpointView);
@@ -252,15 +255,11 @@ namespace Code.Client.Logic
                 Vector2 netForce = mass * acceleration;
                 float netTorque = inertia * angularAcceleration;
                 
-                // If there's known external damping or drag, subtract it here
-                // Example: netForce -= drag * velocity, etc.
+                // Apply drag
                 netForce -= _view.Rb.drag * _velocity;
                 netTorque -= _view.Rb.angularDrag * _angularVelocity;
 
-                // Now we have a "desired" localForce and netTorque similar to what the local player ApplyThrust would produce.
-                // We'll reuse the logic that a local player would have: call ApplyThrust on the OmnidirectionalThrusterController
-                // with these derived forces.
-                _view.ApplyThrust(netForce, netTorque);
+                _view.ApplyLocalThrust(netForce, netTorque);
             }
 
             _lastVelocity = _velocity;

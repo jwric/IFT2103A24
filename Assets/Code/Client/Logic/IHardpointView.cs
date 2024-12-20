@@ -15,6 +15,8 @@ namespace Code.Client.Logic
         
         void OnHardpointAction(byte action);
         
+        void SpawnFire(Vector2 to);
+        
         Vector2 GetFirePosition();
         
         void Destroy();

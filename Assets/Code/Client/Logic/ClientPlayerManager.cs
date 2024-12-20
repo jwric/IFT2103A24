@@ -73,8 +73,7 @@ namespace Code.Client.Logic
             {
                 var cp = (ClientPlayer)from;
                 
-                var firePos = cp.GetViewHardpointFirePosition(hardpointId);
-                _clientLogic.SpawnShoot(firePos, to);
+                cp.ShootHardpoint(hardpointId, to, hit, damage);
             }
         }
 

@@ -116,7 +116,7 @@ namespace Code.Client.GameStates
                 var hitParticles = GameManager.HitParticles;
                 var camera = GameManager.Camera;
                 _clientLogic = new Logic.ClientLogic();
-                _clientLogic.Init(camera, playerViewPrefab, shootPrefab, hitParticles, rewindPrefab, hudController);
+                _clientLogic.Init(camera, shootPrefab, hitParticles, rewindPrefab, hudController);
                 
                 // play music
                 GameManager.AudioManager.PlayMusic("Cosmos");
@@ -135,7 +135,7 @@ namespace Code.Client.GameStates
                 hudController.OnRespawn = () =>
                 {
                     _clientLogic.Destroy();
-                    _clientLogic.Init(camera, playerViewPrefab, shootPrefab, hitParticles, rewindPrefab, hudController);
+                    _clientLogic.Init(camera, shootPrefab, hitParticles, rewindPrefab, hudController);
                 };
                 
                 hudController.OnMainMenu = () =>

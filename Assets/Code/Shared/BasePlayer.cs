@@ -14,10 +14,12 @@ namespace Code.Shared
     public abstract class BasePlayer
     {
         public readonly string Name;
-        public readonly List<HardpointSlot> Hardpoints = new();
 
-        protected float _speed = 7f;
-        protected float _angularSpeed = 0.5f;
+        protected Ship _ship = null;
+        // public readonly List<HardpointSlot> Hardpoints = new();
+
+        // protected float _speed = 7f;
+        // protected float _angularSpeed = 0.5f;
         protected GameTimer _shootTimer = new GameTimer(0.2f);
         protected byte Damage = 10;
         private BasePlayerManager _playerManager;
@@ -29,14 +31,16 @@ namespace Code.Shared
         protected float _angularVelocity;
 
         public const float Radius = 0.5f;
-        public bool IsAlive => _health > 0;
-        public byte Health => _health;
+        public bool IsAlive => _ship.Health > 0;
+        public byte Health => _ship.Health;
         public Vector2 Position => _position;
         public Vector2 Velocity => _velocity;
         public float Rotation => _rotation;
         public float AngularVelocity => _angularVelocity;
         public readonly byte Id;
         public int Ping;
+        
+        public List<HardpointSlot> Hardpoints => _ship.Hardpoints;
 
         protected BasePlayer(BasePlayerManager playerManager, string name, byte id)
         {
@@ -115,9 +119,9 @@ namespace Code.Shared
             _shootTimer.UpdateAsCooldown(delta);
             
             // update hardpoints
-            for (var i = 0; i < Hardpoints.Count; i++)
+            for (var i = 0; i < _ship.Hardpoints.Count; i++)
             {
-                var slot = Hardpoints[i];
+                var slot = _ship.Hardpoints[i];
                 slot.Hardpoint.Update(delta);
                 if (slot.Hardpoint.HasAction(out var action))
                 {
@@ -156,15 +160,15 @@ namespace Code.Shared
         
         public PlayerInitialInfo GetInitialInfo()
         {
-            var hardpointsData = new HardpointSlotInfo[Hardpoints.Count];
-            for (int i = 0; i < Hardpoints.Count; i++)
+            var hardpointsData = new HardpointSlotInfo[_ship.Hardpoints.Count];
+            for (int i = 0; i < _ship.Hardpoints.Count; i++)
             {
                 hardpointsData[i] = new HardpointSlotInfo
                 {
-                    Id = Hardpoints[i].Id,
-                    Type = Hardpoints[i].Hardpoint.Type,
-                    X = Hardpoints[i].Position.x,
-                    Y = Hardpoints[i].Position.y,
+                    Id = _ship.Hardpoints[i].Id,
+                    Type = _ship.Hardpoints[i].Hardpoint.Type,
+                    X = _ship.Hardpoints[i].Position.x,
+                    Y = _ship.Hardpoints[i].Position.y,
                 };
             }
             
@@ -172,8 +176,9 @@ namespace Code.Shared
             {
                 Id = Id,
                 UserName = Name,
+                ShipType = _ship.Type,
                 Health = Health,
-                NumHardpointSlots = (byte) Hardpoints.Count,
+                NumHardpointSlots = (byte) _ship.Hardpoints.Count,
                 Hardpoints = hardpointsData,
             };
         }
