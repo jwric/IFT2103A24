@@ -64,6 +64,8 @@ namespace Code.Shared
         public byte Id;
         public string UserName;
         public ShipType ShipType;
+        public uint PrimaryColor;
+        public uint SecondaryColor;
         public byte Health;
         
         public byte NumHardpointSlots;
@@ -74,6 +76,8 @@ namespace Code.Shared
             writer.Put(Id);
             writer.Put(UserName);
             writer.Put((byte)ShipType);
+            writer.Put(PrimaryColor);
+            writer.Put(SecondaryColor);
             writer.Put(Health);
             writer.Put(NumHardpointSlots);
             for (int i = 0; i < NumHardpointSlots; i++)
@@ -85,6 +89,8 @@ namespace Code.Shared
             Id = reader.GetByte();
             UserName = reader.GetString();
             ShipType = (ShipType)reader.GetByte();
+            PrimaryColor = reader.GetUInt();
+            SecondaryColor = reader.GetUInt();
             Health = reader.GetByte();
             NumHardpointSlots = reader.GetByte();
             if (Hardpoints == null || Hardpoints.Length < NumHardpointSlots)

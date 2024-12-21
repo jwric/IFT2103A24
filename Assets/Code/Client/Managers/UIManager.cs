@@ -3,16 +3,15 @@ using UnityEngine;
 
 namespace Code.Client.Managers
 {
-    
     public class UIManager
     {
         private GameManager gameManager;
-        
+
         private MainMenuController _mainMenu;
         private LoadingScreen _loadingScreen;
         private PauseMenuController _pauseMenu;
         private GameHUDController _gameHUDController;
-        
+
         public MainMenuController MainMenuController => _mainMenu;
         public PauseMenuController PauseMenuController => _pauseMenu;
         public GameHUDController GameHUDController => _gameHUDController;
@@ -27,10 +26,23 @@ namespace Code.Client.Managers
             _loadingScreen = loadingScreen;
             _pauseMenu = pauseMenu;
             _gameHUDController = gameHUDController;
-            
+
+            InitializeMenus();
+        }
+
+        private void InitializeMenus()
+        {
+            // Ensure all menus start hidden but active for animation
+            _mainMenu.gameObject.SetActive(true);
             _mainMenu.Hide();
+
+            _loadingScreen.gameObject.SetActive(true);
             _loadingScreen.Hide();
-            _pauseMenu.Hide();
+
+            _pauseMenu.gameObject.SetActive(true);
+            _pauseMenu.HideInstantly();
+
+            _gameHUDController.gameObject.SetActive(true);
             _gameHUDController.Hide();
         }
 
@@ -73,12 +85,12 @@ namespace Code.Client.Managers
         {
             _gameHUDController.Hide();
         }
-        
+
         public void ShowPauseMenu()
         {
             _pauseMenu.Show();
         }
-        
+
         public void HidePauseMenu()
         {
             _pauseMenu.Hide();

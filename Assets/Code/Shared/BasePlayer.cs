@@ -23,6 +23,9 @@ namespace Code.Shared
         protected GameTimer _shootTimer = new GameTimer(0.2f);
         protected byte Damage = 10;
         private BasePlayerManager _playerManager;
+
+        protected Color _primaryColor = Utils.DecodeColor(0xFFFFFFFF);
+        protected Color _secondaryColor = Utils.DecodeColor(0x3E3E3EFF);
         
         protected Vector2 _position;
         protected float _rotation;
@@ -31,8 +34,8 @@ namespace Code.Shared
         protected float _angularVelocity;
 
         public const float Radius = 0.5f;
-        public bool IsAlive => _ship.Health > 0;
-        public byte Health => _ship.Health;
+        public bool IsAlive => _health > 0;
+        public byte Health => _health;
         public Vector2 Position => _position;
         public Vector2 Velocity => _velocity;
         public float Rotation => _rotation;
@@ -53,7 +56,7 @@ namespace Code.Shared
         {
             _position = position;
             _rotation = 0;
-            _health = 100;
+            _health = _ship.Health;
         }
 
         protected void Shoot()
@@ -177,6 +180,8 @@ namespace Code.Shared
                 Id = Id,
                 UserName = Name,
                 ShipType = _ship.Type,
+                PrimaryColor = Utils.EncodeColor(_primaryColor),
+                SecondaryColor = Utils.EncodeColor(_secondaryColor),
                 Health = Health,
                 NumHardpointSlots = (byte) _ship.Hardpoints.Count,
                 Hardpoints = hardpointsData,

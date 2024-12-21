@@ -45,7 +45,27 @@ namespace Code.Client.Logic
         public float MinDistance => _audioSourceData.MinDistance;
         public float MaxDistance => _audioSourceData.MaxDistance;
         public bool IsPlaying => _audioSource.isPlaying;
+
+        private void OnEnable()
+        {
+            // subscribe to the audio level setting
+            GameManager.Instance.Settings.OnVolumeChanged += OnVolumeChanged;
+        }
         
+        private void OnDisable()
+        {
+            // unsubscribe from the audio level setting
+            GameManager.Instance.Settings.OnVolumeChanged -= OnVolumeChanged;
+        }
+
+        private void OnVolumeChanged()
+        {
+            if (_audioSource.isPlaying)
+            {
+                _audioSource.volume = CalculateVolume();
+            }
+        }
+
         private void Awake()
         {
             _audioSource = GetComponent<AudioSource>();

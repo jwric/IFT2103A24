@@ -86,36 +86,6 @@ namespace Code.Client.Managers
             _musicSource.PlayFadeIn(clip, 0.5f);
         }
         
-        // private IEnumerator FadeOutMusic(float duration)
-        // {
-        //     var startVolume = _musicSource.Volume;
-        //     var startTime = Time.time;
-        //     while (Time.time < startTime + duration)
-        //     {
-        //         _musicSource.volume = Mathf.Lerp(startVolume, 0, (Time.time - startTime) / duration);
-        //         yield return new WaitForEndOfFrame();
-        //     }
-        //     _musicSource.volume = 0;
-        //     _musicSource.Stop();
-        //     _onMusicEnd?.Invoke();
-        // }
-        //
-        // public IEnumerator FadeInMusic(AudioClip clip, float duration)
-        // {
-        //     _musicSource.clip = clip;
-        //     _musicSource.volume = 0;
-        //     _musicSource.Play();
-        //     var targetVolume = 1 * _gameManager.Settings.MusicVolume;
-        //     var startTime = Time.time;
-        //     while (Time.time < startTime + duration)
-        //     {
-        //         _musicSource.volume = Mathf.Lerp(0, targetVolume, (Time.time - startTime) / duration);
-        //         yield return new WaitForEndOfFrame();
-        //     }
-        //     _musicSource.volume = targetVolume;
-        //     _onMusicStart?.Invoke();
-        // }
-        
         public void PlayAmbience(string name, Vector2 position, AudioClipSettings settings)
         {
             var clip = _gameManager.AudioManagerResources.GetAmbienceClip(name);

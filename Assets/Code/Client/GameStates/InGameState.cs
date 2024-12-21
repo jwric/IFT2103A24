@@ -238,7 +238,7 @@ namespace Code.Client.GameStates
             {
                 GameManager.UIManager.HidePauseMenu();
             }
-            Time.timeScale = _isPaused ? 0 : 1;
+            // Time.timeScale = _isPaused ? 0 : 1;
         }
 
         public override void FixedUpdate()

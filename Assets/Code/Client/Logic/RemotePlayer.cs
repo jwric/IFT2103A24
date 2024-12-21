@@ -25,6 +25,8 @@ namespace Code.Client.Logic
             _position = pjPacket.InitialPlayerState.Position;
             _health = pjPacket.InitialInfo.Health;
             _rotation = pjPacket.InitialPlayerState.Rotation;
+            _primaryColor = Utils.DecodeColor(pjPacket.InitialInfo.PrimaryColor);
+            _secondaryColor = Utils.DecodeColor(pjPacket.InitialInfo.SecondaryColor);
             _buffer.Add(pjPacket.InitialPlayerState);
             
             // Create ship
@@ -49,6 +51,8 @@ namespace Code.Client.Logic
         public void SetPlayerView(PlayerView view)
         {
             _view = view;
+            
+            _view.SetColors(_primaryColor, _secondaryColor);
         }
 
         public override void Spawn(Vector2 position)
@@ -101,6 +105,8 @@ namespace Code.Client.Logic
                 _view.GetHardpointView(slot.Id, out var hardpointView);
                 hardpointView?.CurrentRotation(hardpoint.Rotation);
             }
+            
+            _view.SetColors(_primaryColor, _secondaryColor);
         }
         
         public void UpdatePosition(float delta)

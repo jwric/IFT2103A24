@@ -115,7 +115,7 @@ namespace Code.Shared
 
     public class CannonFiringStrategy : IFiringStrategy
     {
-        private float _fireCooldown; // 1 second per shot, for example
+        private float _fireCooldown;
         private float _timeSinceLastShot = 0f;
 
         public CannonFiringStrategy(float fireCooldown = 1.0f)
@@ -127,12 +127,10 @@ namespace Code.Shared
         {
             _timeSinceLastShot += delta;
 
-            // If trigger is held and we are ready to fire
             if (triggerHeld && _timeSinceLastShot >= _fireCooldown)
             {
-                // Fire a projectile
                 _timeSinceLastShot = 0f;
-                return new WeaponAction(1); // 1 could mean "fire projectile"
+                return new WeaponAction(1); 
             }
 
             return WeaponAction.None;
@@ -147,17 +145,13 @@ namespace Code.Shared
 
         public WeaponAction Update(float delta, bool triggerHeld)
         {
-            // If trigger held, we try to achieve lock
             _currentLockTime += delta;
             if (_currentLockTime >= _lockOnTime && !_lockedOn)
             {
                 _lockedOn = true;
-                // Possibly produce a "lock achieved" action code?
                 return new WeaponAction(2); // 2 = locked on
             }
 
-            // If we are locked on and trigger is still held, we might fire immediately
-            // or require a second condition. For simplicity:
             if (_lockedOn)
             {
                 _lockedOn = false;
@@ -171,11 +165,9 @@ namespace Code.Shared
 
     public class RailgunHardpoint : IFiringStrategy
     {
-        // Timing parameters
-        private float _chargeTimeRequired = 1.5f; // For example
+        private float _chargeTimeRequired = 1.5f;
         private float _currentChargeTime = 0f;
 
-        // States
         private enum RailgunState
         {
             Idle,
@@ -198,10 +190,8 @@ namespace Code.Shared
                 case RailgunState.Idle:
                     if (freshPress)
                     {
-                        // Start charging
                         _state = RailgunState.Charging;
                         _currentChargeTime = 0f;
-                        // Send a "begin charging" action
                         action = new WeaponAction(2); // 2 = begin charging
                     }
                     break;
@@ -209,26 +199,20 @@ namespace Code.Shared
                 case RailgunState.Charging:
                     if (!triggerHeld)
                     {
-                        // Player released too early, go back to idle
                         _state = RailgunState.Idle;
                         _currentChargeTime = 0f;
                     }
                     else
                     {
-                        // Accumulate charge time
                         _currentChargeTime += delta;
                         if (_currentChargeTime >= _chargeTimeRequired)
                         {
-                            // At this point, we can decide when to fire:
-                            // If you want it to fire immediately upon full charge, do so:
                             action = new WeaponAction(1); // 1 = fire
                             _state = RailgunState.Fired;
                         }
                     }
                     break;
                 case RailgunState.Fired:
-                    // We have fired once for this continuous hold.
-                    // Wait until the player releases the trigger to reset.
                     if (triggerReleased)
                     {
                         _state = RailgunState.Idle;

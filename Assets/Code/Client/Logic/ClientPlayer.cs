@@ -75,6 +75,14 @@ namespace Code.Client.Logic
             var hi = Object.Instantiate(_clientLogic.RewindGO);
             _rewindRb = hi.GetComponent<Rigidbody2D>();
             
+            // Grab colors from settings and apply them to the player model
+            var primaryColor = GameManager.Instance.Settings.PrimaryColor;
+            var secondaryColor = GameManager.Instance.Settings.SecondaryColor;
+            
+            // Set the colors of the player model
+            _primaryColor = primaryColor;
+            _secondaryColor = secondaryColor;
+            
             // Move the rewind Rigidbody to the rewind scene
             GameManager.Instance.StartCoroutine(MoveObjectToSceneAfterDelay(hi));
         }
@@ -88,6 +96,9 @@ namespace Code.Client.Logic
         public void SetPlayerView(PlayerView view)
         {
             _view = view;
+            
+            // todo do this in a better way
+            _view.SetColors(_primaryColor, _secondaryColor);
         }
         
         public override void NotifyHit(HitInfo hit)

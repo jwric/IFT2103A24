@@ -10,6 +10,9 @@ namespace Code.Client.Logic
     [RequireComponent(typeof(Rigidbody2D)), RequireComponent(typeof(Collider2D))]
     public class PlayerView : MonoBehaviour, IPlayerView
     {
+        [SerializeField] private SpriteRenderer _thrustersSprite;
+        [SerializeField] private SpriteRenderer _hullSprite;
+        
         [SerializeField] private Rigidbody2D _rbView;
         [SerializeField] private TextMesh _name;
         public ShipType ShipType;
@@ -121,6 +124,12 @@ namespace Code.Client.Logic
         public void ApplyLocalThrust(Vector2 thrust, float torque)
         {
             _thrusterController.ApplyLocalThrust(thrust, torque, _rb.rotation);
+        }
+        
+        public void SetColors(Color hullColor, Color thrusterColor)
+        {
+            _hullSprite.color = hullColor;
+            _thrustersSprite.color = thrusterColor;
         }
         
         public void Die()
