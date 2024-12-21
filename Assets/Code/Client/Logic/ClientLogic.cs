@@ -89,14 +89,11 @@ namespace Code.Client.Logic
         {
             Debug.Log("[C] Connected to server");
             
-            Array values = Enum.GetValues(typeof(ShipType));
-            Random random = new Random();
-            ShipType randomShip = (ShipType)values.GetValue(random.Next(values.Length));
-            
+            ShipType selectedShip = GameManager.Instance.Settings.SelectedShip;
             SendPacket(new JoinPacket
             {
                 UserName = _username, 
-                ShipType = randomShip,
+                ShipType = selectedShip,
             }, DeliveryMethod.ReliableOrdered);
         }
         

@@ -19,6 +19,8 @@ namespace Code.Client.Managers
         public Color PrimaryColor { get; set; }
         public Color SecondaryColor { get; set; }
         
+        public ShipType SelectedShip { get; set; }
+        
         public event Action OnVolumeChanged;
         
         public string Name { get; set; }
@@ -36,6 +38,7 @@ namespace Code.Client.Managers
             EntityInterpolation = true;
             PrimaryColor = Utils.DecodeColor(0xFFFFFFFF);
             SecondaryColor = Utils.DecodeColor(0x3E3E3EFF);
+            SelectedShip = ShipType.Artillery;
             
             System.Random r = new System.Random();
 

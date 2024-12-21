@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using Code.Client.Managers;
+using Code.Shared;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,8 @@ namespace Code.Client.UI
         public Slider MusicVolSlider;
         public Slider AmbientVolSlider;
         public Slider SFXVolSlider;
+        
+        public TMP_Dropdown ShipTypeDropdown;
 
         public Slider FPSSlider;
         public Toggle FullscreenToggle;
@@ -122,6 +125,19 @@ namespace Code.Client.UI
             InterpolationToggle.onValueChanged.AddListener(value =>
             {
                 GameManager.Instance.Settings.EntityInterpolation = InterpolationToggle.isOn;
+            });
+            
+            ShipTypeDropdown.ClearOptions();
+            
+            foreach (var shipType in Enum.GetNames(typeof(ShipType)))
+            {
+                ShipTypeDropdown.options.Add(new TMP_Dropdown.OptionData(shipType));
+            }
+            
+            ShipTypeDropdown.value = (int)GameManager.Instance.Settings.SelectedShip;
+            ShipTypeDropdown.onValueChanged.AddListener(value =>
+            {
+                GameManager.Instance.Settings.SelectedShip = (ShipType)value;
             });
 
             PrimColorText.text = $"{ColorUtility.ToHtmlStringRGB(GameManager.Instance.Settings.PrimaryColor)}";
