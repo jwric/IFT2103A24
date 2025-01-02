@@ -155,7 +155,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 1
-  m_Pitch: 1
+  m_Pitch: 2
   Loop: 0
   Mute: 0
   Spatialize: 0
@@ -250,4 +250,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0283feaa8e1447d78692e4c205ef6aca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _audioType: 2
+  audioGroupType: 2

@@ -195,6 +195,16 @@ namespace Code.Client.Logic
         public void SetType(AudioGroupType groupType)
         {
             audioGroupType = groupType;
+            switch (audioGroupType)
+            {
+                case AudioGroupType.Music:
+                    _audioSource.bypassListenerEffects = true;
+                    break;
+                case AudioGroupType.Ambience:
+                    break;
+                case AudioGroupType.SFX:
+                    break;
+            }
         }
         
         private IEnumerator FadeOutCoroutine(float startVolume, float endVolume, float duration, Action callback)

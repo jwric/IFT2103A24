@@ -241,7 +241,7 @@ namespace Code.Server
                 return;
             }
             
-            var player = new ServerPlayer(_playerManager, joinPacket.UserName, joinPacket.ShipType, (byte)id, peer);
+            var player = new ServerPlayer(_playerManager, joinPacket.UserName, joinPacket.ShipType, joinPacket.PrimaryColor, joinPacket.SecondaryColor, (byte)id, peer);
             var playerView = ServerPlayerView.Create(_serverPlayerViewPrefab, player);
             _playerManager.AddPlayer(player, playerView);
 

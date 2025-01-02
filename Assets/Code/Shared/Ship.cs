@@ -67,10 +67,6 @@ namespace Code.Shared
             return thrustPercent * angularThrust;
         }
         
-// This function calculates the local thrust percentages of the ship if it wants to thrust in a certain direction
-// This takes into account the different thrust forces in different directions such as forward, reverse, and strafe 
-// and balances them out to ensure the ship doesn't drift in a certain direction when thrusting and rotating.
-// At 0 rotation, the forward thrust is in the x direction and the strafe thrust is in the y direction.
         public Vector2 CalculateInverseThrustPercents(Vector2 direction, float rotation, Vector2 maxForcePercent)
         {
             // Normalize the direction vector to ensure consistent thrust calculation
@@ -80,7 +76,7 @@ namespace Code.Shared
             }
             else
             {
-                return Vector2.zero; // No thrust needed for a zero vector
+                return Vector2.zero;
             }
 
             // Rotate the direction vector to ship's local space

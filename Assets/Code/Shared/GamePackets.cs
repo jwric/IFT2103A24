@@ -20,6 +20,8 @@ namespace Code.Shared
     {
         public string UserName { get; set; }
         public ShipType ShipType { get; set; }
+        public uint PrimaryColor { get; set; }
+        public uint SecondaryColor { get; set; }
     }
 
     public class JoinAcceptPacket

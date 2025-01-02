@@ -90,10 +90,14 @@ namespace Code.Client.Logic
             Debug.Log("[C] Connected to server");
             
             ShipType selectedShip = GameManager.Instance.Settings.SelectedShip;
+            Color primaryColor = GameManager.Instance.Settings.PrimaryColor;
+            Color secondaryColor = GameManager.Instance.Settings.SecondaryColor;
             SendPacket(new JoinPacket
             {
                 UserName = _username, 
                 ShipType = selectedShip,
+                PrimaryColor = Utils.EncodeColor(primaryColor),
+                SecondaryColor = Utils.EncodeColor(secondaryColor)
             }, DeliveryMethod.ReliableOrdered);
         }
         

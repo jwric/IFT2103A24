@@ -28,11 +28,13 @@ namespace Code.Server
 
         public int TickUpdateCount { get; private set; }
 
-        public ServerPlayer(ServerPlayerManager playerManager, string name, ShipType shipType, byte id, NetPeer peer) : base(playerManager,
+        public ServerPlayer(ServerPlayerManager playerManager, string name, ShipType shipType, uint primColor, uint secColor, byte id, NetPeer peer) : base(playerManager,
             name, id)
         {
             // create ship
             _ship = ShipFactory.CreateShip(shipType);
+            _primaryColor = Utils.DecodeColor(primColor);
+            _secondaryColor = Utils.DecodeColor(secColor);
             
             _playerManager = playerManager;
             AssociatedPeer = peer;
