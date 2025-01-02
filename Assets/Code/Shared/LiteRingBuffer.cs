@@ -12,8 +12,7 @@ namespace Code.Shared
         private int _count;
         private readonly int _capacity;
         
-        public T this[int i] => _elements[(_start + i) % _capacity];
-
+        public ref T this[int i] => ref _elements[(_start + i) % _capacity];
         public LiteRingBuffer(int count)
         {
             _elements = new T[count];

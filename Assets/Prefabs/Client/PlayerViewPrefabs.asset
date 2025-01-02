@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0ef4ee723e1450880f5c679f6da29c8, type: 3}
+  m_Name: PlayerViewPrefabs
+  m_EditorClassIdentifier: 
+  PlayerPrefabs:
+  - {fileID: 4804507857254071616, guid: da08e55069c0fb64bb66837943261bf8, type: 3}
+  - {fileID: 4804507857254071616, guid: f4e765f2a5c0e8c4dae4d98bf25105a4, type: 3}
+  EjectedShellPrefab: {fileID: 8719231081306538689, guid: 9a3213aaaa18c9e40a143681c1e57fd4,
+    type: 3}
+  BulletPrefab: {fileID: -8773819535023388286, guid: a9dea023d481ea040b8dcce845a50fbb,
+    type: 3}
+  PulsePrefab: {fileID: -8773819535023388286, guid: 5d4d1593f4a75b341aeded313e51d1c3,
+    type: 3}
+  LargeThrusterSmokePrefab: {fileID: -4729589092165751414, guid: 83df60e775d57fe4f846b8b98b372320,
+    type: 3}
+  ThrusterSmokePrefab: {fileID: -4729589092165751414, guid: c81cdeb76d1be694db7a79de331610ff,
+    type: 3}
+  LargeThrusterFirePrefab: {fileID: -4729589092165751414, guid: 08dfdff8674a3f94e9d77526f372de05,
+    type: 3}
+  ThrusterFirePrefab: {fileID: -4729589092165751414, guid: 9c31e39042a81fd409fa4596d12c6ae5,
+    type: 3}
+  HardpointEntries:
+  - Type: 1
+    Prefab: {fileID: 1222965046842070581, guid: f1d17d3db4cb45446a3ae80d49c0555f,
+      type: 3}
+  - Type: 2
+    Prefab: {fileID: 1222965046842070581, guid: f1bade78b27db524d8ae69ddbdc05c75,
+      type: 3}
